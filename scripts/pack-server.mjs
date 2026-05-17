@@ -33,9 +33,11 @@ function run() {
       });
     }
 
-    // 2. Direct the lifecycle hook to our native, platform-independent script
+    // 2. STRIP ALL PACK HOOKS: Removes prepack/postpack so the final tarball has no lifecycle dependencies
     if (serverPackage.scripts) {
-      serverPackage.scripts.prepare = 'node ../scripts/prepare-server-ui-dist.mjs';
+      delete serverPackage.scripts.prepack;
+      delete serverPackage.scripts.postpack;
+      delete serverPackage.scripts.prepare;
     }
 
     fs.writeFileSync(SERVER_PACKAGE_PATH, JSON.stringify(serverPackage, null, 2));
