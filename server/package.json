@@ -1,6 +1,6 @@
 {
   "name": "@paperclipai/server",
-  "version": "0.3.1",
+  "version": "0.3.1-jk.1",
   "license": "MIT",
   "homepage": "https://github.com/paperclipai/paperclip",
   "bugs": {
@@ -34,7 +34,7 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "dev:watch": "cross-env PAPERCLIP_MIGRATION_PROMPT=never PAPERCLIP_MIGRATION_AUTO_APPLY=true tsx ./scripts/dev-watch.ts",
-    "prepare:ui-dist": "bash ../scripts/prepare-server-ui-dist.sh",
+    "prepare:ui-dist": "node ../scripts/prepare-server-ui-dist.mjs",
     "build": "tsc && npx shx mkdir -p dist/onboarding-assets && npx shx cp -R src/onboarding-assets/. dist/onboarding-assets/",
     "prepack": "pnpm run prepare:ui-dist",
     "postpack": "rm -rf ui-dist",
