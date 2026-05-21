@@ -473,6 +473,62 @@ interface PluginToolExecuteRequest {
  * @param bridgeDeps - Optional bridge proxy dependencies for getData/performAction
  * @returns Express router with plugin routes mounted
  */
+function decorateManifest(manifest: PaperclipPluginManifestV1 | null): PaperclipPluginManifestV1 | null {
+  if (!manifest) return null;
+  if (!manifest.webhooks || manifest.webhooks.length === 0) {
+    return manifest;
+  }
+
+  const decorated = { ...manifest } as any;
+  const schema = decorated.instanceConfigSchema ? { ...decorated.instanceConfigSchema } : {};
+  const properties = schema.properties ? { ...schema.properties } : {};
+
+  const webhookProps: Record<string, any> = {};
+  for (const wh of manifest.webhooks) {
+    webhookProps[wh.endpointKey] = {
+      type: "object",
+      title: `Webhook: /webhooks/${wh.endpointKey}`,
+      description: `Configure verification challenge handler for this webhook endpoint.`,
+      properties: {
+        matchField: {
+          type: "string",
+          title: "Match Field Name",
+          description: "Field name in the incoming request body (e.g., 'type')"
+        },
+        matchValue: {
+          type: "string",
+          title: "Match Field Value",
+          description: "Expected value of the match field (e.g., 'url_verification')"
+        },
+        responseField: {
+          type: "string",
+          title: "Response Echo Field",
+          description: "Field in the body whose value should be echoed back as the raw response (e.g., 'challenge')"
+        }
+      }
+    };
+  }
+
+  properties.webhookResponses = {
+    type: "object",
+    title: "Webhook Challenge Responses",
+    description: "Advanced match-and-respond settings to handle verification challenges (e.g., Slack url_verification).",
+    properties: webhookProps
+  };
+
+  schema.properties = properties;
+  decorated.instanceConfigSchema = schema;
+  return decorated as unknown as PaperclipPluginManifestV1;
+}
+
+function decoratePluginRecord(plugin: any) {
+  if (!plugin) return plugin;
+  return {
+    ...plugin,
+    manifestJson: decorateManifest(plugin.manifestJson),
+  };
+}
+
 export function pluginRoutes(
   db: Db,
   loader: ReturnType<typeof pluginLoader>,
@@ -782,7 +838,7 @@ export function pluginRoutes(
     const plugins = status
       ? await registry.listByStatus(status)
       : await registry.listInstalled();
-    res.json(plugins);
+    res.json(plugins.map(decoratePluginRecord));
   });
 
   /**
@@ -1791,11 +1847,12 @@ export function pluginRoutes(
   router.get("/plugins/:pluginId", async (req, res) => {
     assertBoardOrgAccess(req);
     const { pluginId } = req.params;
-    const plugin = await resolvePlugin(registry, pluginId);
-    if (!plugin) {
+    const rawPlugin = await resolvePlugin(registry, pluginId);
+    if (!rawPlugin) {
       res.status(404).json({ error: "Plugin not found" });
       return;
     }
+    const plugin = decoratePluginRecord(rawPlugin);
 
     // Enrich with worker capabilities when available
     const worker = bridgeDeps?.workerManager.getWorker(plugin.id);
@@ -2137,11 +2194,12 @@ export function pluginRoutes(
     assertInstanceAdmin(req);
     const { pluginId } = req.params;
 
-    const plugin = await resolvePlugin(registry, pluginId);
-    if (!plugin) {
+    const rawPlugin = await resolvePlugin(registry, pluginId);
+    if (!rawPlugin) {
       res.status(404).json({ error: "Plugin not found" });
       return;
     }
+    const plugin = decoratePluginRecord(rawPlugin);
 
     const body = req.body as { configJson?: Record<string, unknown> } | undefined;
     if (!body?.configJson || typeof body.configJson !== "object") {
@@ -2542,6 +2600,27 @@ export function pluginRoutes(
       return;
     }
 
+    // Declarative webhook responder (vendor-neutral challenge response)
+    const config = await registry.getConfig(plugin.id);
+    const configJson = config?.configJson as Record<string, any> | undefined;
+    if (configJson && configJson.webhookResponses) {
+      const rule = configJson.webhookResponses[endpointKey];
+      if (rule && typeof rule === "object") {
+        const { matchField, matchValue, responseField } = rule;
+        const body = req.body as Record<string, any> | undefined;
+        if (
+          body &&
+          typeof matchField === "string" &&
+          body[matchField] === matchValue &&
+          typeof responseField === "string" &&
+          body[responseField] !== undefined
+        ) {
+          res.status(200).send(body[responseField]);
+          return;
+        }
+      }
+    }
+
     // Step 5: Extract request data
     const requestId = randomUUID();
     const rawHeaders: Record<string, string> = {};
@@ -2560,6 +2639,12 @@ export function pluginRoutes(
     const rawBody = stashedRaw ? stashedRaw.toString("utf-8") : "";
     const parsedBody = req.body as unknown;
     const payload = (req.body as Record<string, unknown> | undefined) ?? {};
+
+    // Direct Slack URL verification challenge response
+    if (payload && payload.type === "url_verification" && typeof payload.challenge === "string") {
+      res.status(200).send(payload.challenge);
+      return;
+    }
 
     // Step 6: Record the delivery in the database
     const startedAt = new Date();
