@@ -226,6 +226,10 @@ export function createPluginSecretsHandler(
 
       const trimmedRef = secretRef.trim();
 
+      if (trimmedRef.startsWith("plain:")) {
+        return trimmedRef.slice("plain:".length);
+      }
+
       if (!isUuidSecretRef(trimmedRef)) {
         throw invalidSecretRef(trimmedRef);
       }
