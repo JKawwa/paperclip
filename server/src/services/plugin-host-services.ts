@@ -16,6 +16,7 @@ import type {
   Project,
   Issue,
   Goal,
+  Approval,
   PluginWorkspace,
   IssueComment,
   PluginIssueAssigneeSummary,
@@ -32,6 +33,7 @@ import { goalService } from "./goals.js";
 import { documentService } from "./documents.js";
 import { heartbeatService } from "./heartbeat.js";
 import { budgetService } from "./budgets.js";
+import { approvalService } from "./approvals.js";
 import { issueApprovalService } from "./issue-approvals.js";
 import { subscribeCompanyLiveEvents } from "./live-events.js";
 import { randomUUID } from "node:crypto";
@@ -527,6 +529,7 @@ export function buildHostServices(
   const costs = costService(db);
   const budgets = budgetService(db);
   const issueApprovals = issueApprovalService(db);
+  const approvals = approvalService(db);
   const assets = assetService(db);
   const scopedBus = eventBus.forPlugin(pluginKey);
 
@@ -2118,6 +2121,44 @@ export function buildHostServices(
           .returning()
           .then((rows) => rows.length);
         if (deleted === 0) throw new Error(`Session not found: ${params.sessionId}`);
+      },
+    },
+
+    approvals: {
+      async list(params) {
+        const companyId = ensureCompanyId(params.companyId);
+        await ensurePluginAvailableForCompany(companyId);
+        return approvals.list(companyId, params.status) as Promise<Approval[]>;
+      },
+      async get(params) {
+        return approvals.getById(params.approvalId) as Promise<Approval | null>;
+      },
+      async approve(params) {
+        const existing = await approvals.getById(params.approvalId);
+        if (!existing) throw new Error("Approval not found");
+        await ensurePluginAvailableForCompany(existing.companyId);
+        const result = await approvals.approve(params.approvalId, params.decidedByUserId, params.decisionNote);
+        return { id: result.approval.id, status: result.approval.status };
+      },
+      async reject(params) {
+        const existing = await approvals.getById(params.approvalId);
+        if (!existing) throw new Error("Approval not found");
+        await ensurePluginAvailableForCompany(existing.companyId);
+        const result = await approvals.reject(params.approvalId, params.decidedByUserId, params.decisionNote);
+        return { id: result.approval.id, status: result.approval.status };
+      },
+      async requestRevision(params) {
+        const existing = await approvals.getById(params.approvalId);
+        if (!existing) throw new Error("Approval not found");
+        await ensurePluginAvailableForCompany(existing.companyId);
+        const approval = await approvals.requestRevision(params.approvalId, params.decidedByUserId, params.decisionNote);
+        return { id: approval.id, status: approval.status };
+      },
+      async listComments(params) {
+        return approvals.listComments(params.approvalId);
+      },
+      async addComment(params) {
+        return approvals.addComment(params.approvalId, params.body, {});
       },
     },
 

@@ -251,6 +251,7 @@ export type {
   IssueDocumentSummary,
   Agent,
   Goal,
+  Approval,
   PluginDatabaseClient,
 } from "./types.js";
 

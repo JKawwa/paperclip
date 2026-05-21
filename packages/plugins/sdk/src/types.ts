@@ -39,6 +39,8 @@ import type {
   RoutineRun,
   Agent,
   Goal,
+  Approval,
+  ApprovalComment,
 } from "@paperclipai/shared";
 
 // ---------------------------------------------------------------------------
@@ -120,6 +122,8 @@ export type {
   IssueSurfaceVisibility,
   Agent,
   Goal,
+  Approval,
+  ApprovalComment,
 } from "@paperclipai/shared";
 
 // ---------------------------------------------------------------------------
@@ -1523,6 +1527,21 @@ export interface PluginGoalsClient {
   ): Promise<Goal>;
 }
 
+/**
+ * `ctx.approvals` — read and resolve approvals.
+ *
+ * Requires `admin.approvals`.
+ */
+export interface PluginApprovalsClient {
+  list(input: { companyId: string; status?: string }): Promise<Approval[]>;
+  get(approvalId: string): Promise<Approval | null>;
+  approve(approvalId: string, decidedByUserId: string, decisionNote?: string | null): Promise<{ id: string; status: string }>;
+  reject(approvalId: string, decidedByUserId: string, decisionNote?: string | null): Promise<{ id: string; status: string }>;
+  requestRevision(approvalId: string, decidedByUserId: string, decisionNote?: string | null): Promise<{ id: string; status: string }>;
+  listComments(approvalId: string): Promise<ApprovalComment[]>;
+  addComment(approvalId: string, body: string): Promise<ApprovalComment>;
+}
+
 // ---------------------------------------------------------------------------
 // Streaming (worker → UI push channel)
 // ---------------------------------------------------------------------------
@@ -1659,6 +1678,9 @@ export interface PluginContext {
 
   /** Read and mutate goals. Requires `goals.read` for reads; `goals.create` / `goals.update` for write ops. */
   goals: PluginGoalsClient;
+
+  /** Read and resolve approvals. Requires `admin.approvals`. */
+  approvals: PluginApprovalsClient;
 
   /** Register getData handlers for the plugin's UI components. */
   data: PluginDataClient;

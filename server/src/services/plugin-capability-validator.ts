@@ -114,6 +114,15 @@ const OPERATION_CAPABILITIES: Record<string, readonly PluginCapability[]> = {
   "http.request": ["http.outbound"],
   "secrets.resolve": ["secrets.read-ref"],
 
+  // Approval operations
+  "approvals.list": ["admin.approvals"],
+  "approvals.get": ["admin.approvals"],
+  "approvals.approve": ["admin.approvals"],
+  "approvals.reject": ["admin.approvals"],
+  "approvals.requestRevision": ["admin.approvals"],
+  "approvals.listComments": ["admin.approvals"],
+  "approvals.addComment": ["admin.approvals"],
+
   // Agent tools
   "agent.tools.register": ["agent.tools.register"],
   "agent.tools.execute": ["agent.tools.register"],

@@ -252,6 +252,17 @@ export interface HostServices {
     create(params: WorkerToHostMethods["goals.create"][0]): Promise<WorkerToHostMethods["goals.create"][1]>;
     update(params: WorkerToHostMethods["goals.update"][0]): Promise<WorkerToHostMethods["goals.update"][1]>;
   };
+
+  /** Provides approval operations. Requires `admin.approvals`. */
+  approvals: {
+    list(params: WorkerToHostMethods["approvals.list"][0]): Promise<WorkerToHostMethods["approvals.list"][1]>;
+    get(params: WorkerToHostMethods["approvals.get"][0]): Promise<WorkerToHostMethods["approvals.get"][1]>;
+    approve(params: WorkerToHostMethods["approvals.approve"][0]): Promise<WorkerToHostMethods["approvals.approve"][1]>;
+    reject(params: WorkerToHostMethods["approvals.reject"][0]): Promise<WorkerToHostMethods["approvals.reject"][1]>;
+    requestRevision(params: WorkerToHostMethods["approvals.requestRevision"][0]): Promise<WorkerToHostMethods["approvals.requestRevision"][1]>;
+    listComments(params: WorkerToHostMethods["approvals.listComments"][0]): Promise<WorkerToHostMethods["approvals.listComments"][1]>;
+    addComment(params: WorkerToHostMethods["approvals.addComment"][0]): Promise<WorkerToHostMethods["approvals.addComment"][1]>;
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -425,6 +436,15 @@ const METHOD_CAPABILITY_MAP: Record<WorkerToHostMethodName, PluginCapability | n
   "goals.get": "goals.read",
   "goals.create": "goals.create",
   "goals.update": "goals.update",
+
+  // Approvals
+  "approvals.list": "admin.approvals",
+  "approvals.get": "admin.approvals",
+  "approvals.approve": "admin.approvals",
+  "approvals.reject": "admin.approvals",
+  "approvals.requestRevision": "admin.approvals",
+  "approvals.listComments": "admin.approvals",
+  "approvals.addComment": "admin.approvals",
 };
 
 // ---------------------------------------------------------------------------
@@ -762,6 +782,29 @@ export function createHostClientHandlers(
     }),
     "goals.update": gated("goals.update", async (params) => {
       return services.goals.update(params);
+    }),
+
+    // Approvals
+    "approvals.list": gated("approvals.list", async (params) => {
+      return services.approvals.list(params);
+    }),
+    "approvals.get": gated("approvals.get", async (params) => {
+      return services.approvals.get(params);
+    }),
+    "approvals.approve": gated("approvals.approve", async (params) => {
+      return services.approvals.approve(params);
+    }),
+    "approvals.reject": gated("approvals.reject", async (params) => {
+      return services.approvals.reject(params);
+    }),
+    "approvals.requestRevision": gated("approvals.requestRevision", async (params) => {
+      return services.approvals.requestRevision(params);
+    }),
+    "approvals.listComments": gated("approvals.listComments", async (params) => {
+      return services.approvals.listComments(params);
+    }),
+    "approvals.addComment": gated("approvals.addComment", async (params) => {
+      return services.approvals.addComment(params);
     }),
   };
 }

@@ -1080,6 +1080,33 @@ export function startWorkerRpcHost(options: WorkerRpcHostOptions): WorkerRpcHost
         },
       },
 
+      approvals: {
+        async list(input) {
+          return callHost("approvals.list", {
+            companyId: input.companyId,
+            status: input.status,
+          });
+        },
+        async get(approvalId: string) {
+          return callHost("approvals.get", { approvalId });
+        },
+        async approve(approvalId: string, decidedByUserId: string, decisionNote?: string | null) {
+          return callHost("approvals.approve", { approvalId, decidedByUserId, decisionNote });
+        },
+        async reject(approvalId: string, decidedByUserId: string, decisionNote?: string | null) {
+          return callHost("approvals.reject", { approvalId, decidedByUserId, decisionNote });
+        },
+        async requestRevision(approvalId: string, decidedByUserId: string, decisionNote?: string | null) {
+          return callHost("approvals.requestRevision", { approvalId, decidedByUserId, decisionNote });
+        },
+        async listComments(approvalId: string) {
+          return callHost("approvals.listComments", { approvalId });
+        },
+        async addComment(approvalId: string, body: string) {
+          return callHost("approvals.addComment", { approvalId, body });
+        },
+      },
+
       data: {
         register(key: string, handler: (params: Record<string, unknown>) => Promise<unknown>): void {
           dataHandlers.set(key, handler);
