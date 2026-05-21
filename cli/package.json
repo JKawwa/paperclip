@@ -1,6 +1,6 @@
 {
   "name": "paperclipai",
-  "version": "0.3.1-jk.1",
+  "version": "0.3.1",
   "description": "Paperclip CLI — orchestrate AI agent teams to run a business",
   "type": "module",
   "bin": {
@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@clack/prompts": "^0.10.0",
-    "@paperclipai/server": "0.3.1-jk.1",
+    "@paperclipai/server": "workspace:*",
     "commander": "^13.1.0",
     "dotenv": "^17.0.1",
     "drizzle-orm": "0.45.2",
