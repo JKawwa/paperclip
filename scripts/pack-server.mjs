@@ -26,11 +26,43 @@ function run() {
   const SERVER_UI_DIST = path.join(SERVER_DIR, 'ui-dist');
 
   try {
-    // 1. Resolve monorepo workspace dependencies in memory
+    // 1. Resolve monorepo workspace dependencies in memory.
+    //    Since the user is building a patched server tarball that others can install
+    //    globally without publishing the rest of the workspace packages, we resolve
+    //    all other `@paperclipai/*` workspace dependencies to their corresponding
+    //    publicly published calendar version (e.g., ^2026.517.0).
+    let upstreamVersion = '2026.517.0';
+    try {
+      const releasesDir = path.join(REPO_ROOT, 'releases');
+      if (fs.existsSync(releasesDir)) {
+        const files = fs.readdirSync(releasesDir);
+        const versions = files
+          .map((f) => {
+            const m = f.match(/^v(\d+\.\d+\.\d+)\.md$/);
+            return m ? m[1] : null;
+          })
+          .filter(Boolean);
+        if (versions.length > 0) {
+          versions.sort((a, b) => {
+            const parse = (v) => v.split('.').map(Number);
+            const [a1, a2, a3] = parse(a);
+            const [b1, b2, b3] = parse(b);
+            if (a1 !== b1) return b1 - a1;
+            if (a2 !== b2) return b2 - a2;
+            return b3 - a3;
+          });
+          upstreamVersion = versions[0];
+        }
+      }
+    } catch (e) {
+      // Use fallback 2026.517.0 if releases parsing fails
+    }
+    console.log(`📡 Resolving workspace dependencies to public upstream version ^${upstreamVersion}...`);
+
     if (serverPackage.dependencies) {
       Object.keys(serverPackage.dependencies).forEach((dep) => {
         if (serverPackage.dependencies[dep].startsWith('workspace:')) {
-          serverPackage.dependencies[dep] = `^${currentVersion}`;
+          serverPackage.dependencies[dep] = `^${upstreamVersion}`;
         }
       });
     }
@@ -98,8 +130,8 @@ function run() {
       } else {
         // Fallback: attempt to run `npm pack` directly without a shell.
         // This avoids shell wrappers and usually works cross-platform.
-        usedFallback = true;
-        execFileSync('npm', ['pack'], { cwd: SERVER_DIR, stdio: 'inherit', env });
+        const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
+        execFileSync(npmCmd, ['pack'], { cwd: SERVER_DIR, stdio: 'inherit', env, shell: process.platform === "win32" });
       }
 
       console.log('✅ Server tarball built successfully!');

@@ -1,7 +1,41 @@
 import { randomBytes } from "node:crypto";
 import fs from "node:fs";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import type { PaperclipConfig } from "../config/schema.js";
+
+function verifyWindowsFileSecurity(filePath: string): { secure: boolean; warnings: string[] } {
+  try {
+    const rawOutput = execFileSync("icacls", [filePath], { encoding: "utf8" });
+    // Remove the file path from the output to prevent false positives on folder names (e.g., C:\\Users\\...)
+    const escapedPath = filePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const output = rawOutput.replace(new RegExp(escapedPath, "gi"), "");
+    const insecureGroups = [
+      "Everyone",
+      "Users",
+      "BUILTIN\\Users",
+      "Guests",
+      "BUILTIN\\Guests",
+      "Authenticated Users",
+      "ANONYMOUS LOGON"
+    ];
+    const warnings: string[] = [];
+    if (output.includes("(I)")) {
+      warnings.push(`Inheritance is enabled on key file ${filePath}; run icacls "${filePath}" /inheritance:d`);
+    }
+    for (const group of insecureGroups) {
+      if (new RegExp(`\\b${group}\\b`, "i").test(output)) {
+        warnings.push(`Insecure group/user "${group}" has access to key file ${filePath}; run icacls "${filePath}" /remove "${group}"`);
+      }
+    }
+    return {
+      secure: warnings.length === 0,
+      warnings
+    };
+  } catch {
+    return { secure: true, warnings: [] };
+  }
+}
 import type { CheckResult } from "./index.js";
 import { resolveRuntimeLikePath } from "./path-resolver.js";
 
@@ -142,10 +176,16 @@ export function secretsCheck(config: PaperclipConfig, configPath?: string): Chec
   }
 
   const keyMode = fs.statSync(keyFilePath).mode & 0o777;
-  const permissionWarning =
-    (keyMode & 0o077) !== 0
-      ? `; key file permissions are ${keyMode.toString(8)} (run chmod 600 ${keyFilePath})`
-      : "";
+  //console.log(`[DEBUG] process.platform in secrets-check is: ${process.platform}`);
+  let permissionWarning = "";
+  if (process.platform === "win32") {
+    const winSec = verifyWindowsFileSecurity(keyFilePath);
+    if (!winSec.secure) {
+      permissionWarning = `; ${winSec.warnings.join("; ")}`;
+    }
+  } else if ((keyMode & 0o077) !== 0) {
+    permissionWarning = `; key file permissions are ${keyMode.toString(8)} (run chmod 600 ${keyFilePath})`;
+  }
 
   return withStrictModeNote(
     {

@@ -870,8 +870,9 @@ export function pluginLoader(
         // Use execFile (not exec) to avoid shell injection from package name/version.
         // --ignore-scripts prevents preinstall/install/postinstall hooks from
         // executing arbitrary code on the host before manifest validation.
+        const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
         await execFileAsync(
-          "npm",
+          npmCmd,
           ["install", spec, "--prefix", targetInstallDir, "--save", "--ignore-scripts"],
           { timeout: 120_000, shell: process.platform === "win32"}, // 2 minute timeout for npm install
         );
@@ -889,6 +890,45 @@ export function pluginLoader(
         resolvedPackagePath = path.join(nodeModulesPath, scope!, name!);
       } else {
         resolvedPackagePath = path.join(nodeModulesPath, resolvedPackageName);
+      }
+
+      // If the path does not exist, try to resolve it from targetInstallDir's package.json dependencies
+      if (!existsSync(resolvedPackagePath)) {
+        const packageJsonPath = path.join(targetInstallDir, "package.json");
+        if (existsSync(packageJsonPath)) {
+          try {
+            const pkgJsonRaw = await readFile(packageJsonPath, "utf8");
+            const pkgJson = JSON.parse(pkgJsonRaw);
+            const deps = pkgJson.dependencies || {};
+            
+            const targetPackageName = packageName!;
+            // Find a dependency key where the value contains or ends with our packageName specifier
+            // or where the key itself matches
+            const matchedKey = Object.keys(deps).find((key) => {
+              const val = deps[key];
+              return (
+                key === targetPackageName ||
+                (typeof val === "string" && (val === targetPackageName || val.endsWith(targetPackageName) || val.includes(targetPackageName)))
+              );
+            });
+            
+            if (matchedKey) {
+              log.info(
+                { packageName: targetPackageName, matchedKey },
+                "plugin-loader: resolved alias for installed package",
+              );
+              resolvedPackageName = matchedKey;
+              if (resolvedPackageName.startsWith("@")) {
+                const [scope, name] = resolvedPackageName.split("/");
+                resolvedPackagePath = path.join(nodeModulesPath, scope!, name!);
+              } else {
+                resolvedPackagePath = path.join(nodeModulesPath, resolvedPackageName);
+              }
+            }
+          } catch (e) {
+            log.warn({ err: e }, "plugin-loader: failed to read package.json dependencies for resolution");
+          }
+        }
       }
 
       if (!existsSync(resolvedPackagePath)) {
@@ -1505,10 +1545,11 @@ export function pluginLoader(
       const packageJsonPath = path.join(localPluginDir, "package.json");
       if (existsSync(packageJsonPath)) {
         try {
+          const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
           await execFileAsync(
-            "npm",
+            npmCmd,
             ["uninstall", plugin.packageName, "--prefix", localPluginDir, "--ignore-scripts"],
-            { timeout: 120_000 },
+            { timeout: 120_000, shell: process.platform === "win32" },
           );
         } catch (err) {
           log.warn(

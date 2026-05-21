@@ -877,7 +877,7 @@ export function pluginRoutes(
     }
 
     // Basic security check for package name (prevent injection)
-    if (!isLocalPath && /[<>:"|?*]/.test(trimmedPackage)) {
+    if (!isLocalPath && /[<>"|?*]/.test(trimmedPackage)) {
       res.status(400).json({ error: "packageName contains invalid characters" });
       return;
     }
