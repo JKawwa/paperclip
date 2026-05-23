@@ -4,25 +4,19 @@ import type { CheckResult } from "./index.js";
 import { resolveRuntimeLikePath } from "./path-resolver.js";
 
 export async function databaseCheck(config: PaperclipConfig, configPath?: string): Promise<CheckResult> {
-  if (config.database.mode === "postgres") {
-    if (!config.database.connectionString) {
-      return {
-        name: "Database",
-        status: "fail",
-        message: "PostgreSQL mode selected but no connection string configured",
-        canRepair: false,
-        repairHint: "Run `paperclipai configure --section database`",
-      };
-    }
+  const envUrl = process.env.DATABASE_URL?.trim();
+  const effectiveUrl = envUrl || config.database.connectionString?.trim();
 
+  if (effectiveUrl) {
     try {
       const { createDb } = await import("@paperclipai/db");
-      const db = createDb(config.database.connectionString);
+      const db = createDb(effectiveUrl);
       await db.execute("SELECT 1");
+      const source = envUrl ? "DATABASE_URL env var" : "config.database.connectionString";
       return {
         name: "Database",
         status: "pass",
-        message: "PostgreSQL connection successful",
+        message: `PostgreSQL connection successful (using ${source})`,
       };
     } catch (err) {
       return {
