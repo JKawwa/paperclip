@@ -8,6 +8,12 @@ import {
   resolvePaperclipInstanceRootForAdapter,
   type PaperclipSkillEntry,
 } from "@paperclipai/adapter-utils/server-utils";
+// PluginToolDispatcher is provided by the server context at runtime
+interface PluginToolDispatcher {
+  getTool(namespacedName: string): any;
+  listToolsForAgent(filter?: { pluginId?: string }): any[];
+  executeTool(tool: string, parameters: any, runContext: any): Promise<any>;
+}
 
 type SkillEntry = PaperclipSkillEntry;
 
@@ -136,8 +142,10 @@ export async function prepareClaudePromptBundle(input: {
   skills: SkillEntry[];
   instructionsContents: string | null;
   onLog: AdapterExecutionContext["onLog"];
+  toolDispatcher: PluginToolDispatcher;
+  agent: { id: string; permissions?: Record<string, any> };
 }): Promise<ClaudePromptBundle> {
-  const { companyId, skills, instructionsContents, onLog } = input;
+  const { companyId, skills, instructionsContents, onLog, toolDispatcher, agent } = input;
   const bundleKey = await buildClaudePromptBundleKey({
     skills,
     instructionsContents,
@@ -145,6 +153,46 @@ export async function prepareClaudePromptBundle(input: {
   const rootDir = path.join(resolveManagedClaudePromptCacheRoot(process.env, companyId), bundleKey);
   const skillsHome = path.join(rootDir, ".claude", "skills");
   await fs.mkdir(skillsHome, { recursive: true });
+
+  // Generate dynamic plugin-tools.md for allowed tools
+  const agentPermissions = agent.permissions as Record<string, any>;
+  const allowedMap = agentPermissions?.allowedPluginTools ?? {};
+  const allowedToolNames = Object.keys(allowedMap).filter(key => allowedMap[key] === true);
+
+  if (allowedToolNames.length > 0) {
+    const dynamicToolsMarkdown = [
+      "---",
+      "name: plugin-tools",
+      "description: Executable third-party integration tools assigned to you.",
+      "---",
+      "# Active Plugin Tools",
+      "",
+      "You have explicit authorization to call the following tools. To call any of these tools,",
+      "execute the shell wrapper in the workspace:",
+      "```bash",
+      "scripts/paperclip-execute-tool.sh --tool <ToolName> --parameters '<JsonString>'",
+      "```",
+      ""
+    ];
+
+    for (const namespacedName of allowedToolNames) {
+      const tool = toolDispatcher.getTool(namespacedName);
+      if (!tool) continue;
+
+      dynamicToolsMarkdown.push(
+        `## Tool: ${namespacedName}`,
+        `**Description**: ${tool.description}`,
+        "**Parameter Schema (JSON):**",
+        "```json",
+        JSON.stringify(tool.parametersSchema, null, 2),
+        "```",
+        ""
+      );
+    }
+
+    const pluginToolsFilePath = path.join(skillsHome, "plugin-tools.md");
+    await fs.writeFile(pluginToolsFilePath, dynamicToolsMarkdown.join("\n"), "utf8");
+  }
 
   for (const entry of skills) {
     const target = path.join(skillsHome, entry.runtimeName);

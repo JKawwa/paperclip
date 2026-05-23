@@ -10,6 +10,9 @@ import { envConfigSchema } from "./secret.js";
 
 export const agentPermissionsSchema = z.object({
   canCreateAgents: z.boolean().optional().default(false),
+  canAssignTasks: z.boolean().optional().default(false),
+  // Map of namespaced tool names -> allowed state (e.g., { "slack:send-message": true })
+  allowedPluginTools: z.record(z.boolean()).optional().default({}),
 });
 
 export const agentInstructionsBundleModeSchema = z.enum(["managed", "external"]);
@@ -158,6 +161,7 @@ export type TestAdapterEnvironment = z.infer<typeof testAdapterEnvironmentSchema
 export const updateAgentPermissionsSchema = z.object({
   canCreateAgents: z.boolean(),
   canAssignTasks: z.boolean(),
+  allowedPluginTools: z.record(z.boolean()).optional(),
 });
 
 export type UpdateAgentPermissions = z.infer<typeof updateAgentPermissionsSchema>;
