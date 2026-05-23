@@ -37,6 +37,8 @@ import {
   stringifyPaperclipWakePayload,
   refreshPaperclipWorkspaceEnvForExecution,
   DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE,
+  injectPluginToolsSkill,
+  type PluginToolDispatcher,
 } from "@paperclipai/adapter-utils/server-utils";
 import { DEFAULT_GROK_LOCAL_MODEL } from "../index.js";
 import { isGrokUnknownSessionError, parseGrokJsonl } from "./parse.js";
@@ -190,6 +192,9 @@ function resolveBillingType(env: Record<string, string>): "api" | "subscription"
 
 export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExecutionResult> {
   const { runId, agent, runtime, config, context, onLog, onMeta, onSpawn, authToken } = ctx;
+  const globalPluginToolDispatcher = (ctx as any)?.globalPluginToolDispatcher as
+    | PluginToolDispatcher
+    | undefined;
   const executionTarget = readAdapterExecutionTarget({
     executionTarget: ctx.executionTarget,
     legacyRemoteExecution: ctx.executionTransport?.remoteExecution,
@@ -237,6 +242,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     desiredSkillNames: desiredGrokSkillNames,
     onLog,
   });
+  await injectPluginToolsSkill(path.join(cwd, ".claude", "skills"), agent, globalPluginToolDispatcher);
   let restoreRemoteWorkspace: (() => Promise<void>) | null = null;
 
   try {
@@ -578,6 +584,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     await Promise.all([
       restoreRemoteWorkspace?.(),
       stagedAssets.cleanup(),
+      fs.rm(path.join(cwd, ".claude", "skills", "plugin-tools.md"), { force: true }).catch(() => {}),
     ]);
   }
 }

@@ -37,6 +37,8 @@ import {
   stringifyPaperclipWakePayload,
   DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE,
   joinPromptSections,
+  injectPluginToolsSkill,
+  type PluginToolDispatcher,
 } from "@paperclipai/adapter-utils/server-utils";
 import {
   parseCodexJsonl,
@@ -284,6 +286,9 @@ export async function ensureCodexSkillsInjected(
 
 export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExecutionResult> {
   const { runId, agent, runtime, config, context, onLog, onMeta, onSpawn, authToken } = ctx;
+  const globalPluginToolDispatcher = (ctx as any)?.globalPluginToolDispatcher as
+    | PluginToolDispatcher
+    | undefined;
 
   const promptTemplate = asString(
     config.promptTemplate,
@@ -359,6 +364,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       desiredSkillNames,
     },
   );
+  await injectPluginToolsSkill(codexSkillsDir, agent, globalPluginToolDispatcher);
   const timeoutSec = resolveAdapterExecutionTargetTimeoutSec(
     executionTarget,
     asNumber(config.timeoutSec, 0),
@@ -853,5 +859,6 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       );
       await restoreRemoteWorkspace();
     }
+    await fs.rm(path.join(codexSkillsDir, "plugin-tools.md"), { force: true }).catch(() => {});
   }
 }
