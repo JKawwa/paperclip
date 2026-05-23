@@ -465,9 +465,6 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   const globalPluginToolDispatcher = (ctx as any)?.globalPluginToolDispatcher as
     | PluginToolDispatcher
     | undefined;
-  if (!globalPluginToolDispatcher) {
-    throw new Error("globalPluginToolDispatcher is required for plugin tool permissions");
-  }
 
   const promptBundle = await prepareClaudePromptBundle({
     companyId: agent.companyId,

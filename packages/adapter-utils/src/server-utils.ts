@@ -2107,3 +2107,103 @@ export async function runChildProcess(
       .catch(reject);
   });
 }
+
+export interface PluginToolDispatcher {
+  getTool(namespacedName: string): any;
+  listToolsForAgent(filter?: { pluginId?: string }): any[];
+  executeTool(tool: string, parameters: any, runContext: any): Promise<any>;
+}
+
+export async function injectPluginToolsSkill(
+  skillsHome: string,
+  agent: { id: string; permissions?: Record<string, any> },
+  toolDispatcher: PluginToolDispatcher | undefined,
+): Promise<void> {
+  const pluginToolsFilePath = path.join(skillsHome, "plugin-tools.md");
+  if (!toolDispatcher) {
+    await fs.unlink(pluginToolsFilePath).catch(() => {});
+    return;
+  }
+
+  const agentPermissions = agent.permissions as Record<string, any>;
+  const allowedMap = agentPermissions?.allowedPluginTools ?? {};
+  const allowedToolNames = Object.keys(allowedMap).filter(key => allowedMap[key] === true);
+
+  if (allowedToolNames.length > 0) {
+    const dynamicToolsMarkdown = [
+      "---",
+      "name: plugin-tools",
+      "description: Executable third-party integration tools assigned to you.",
+      "---",
+      "# Active Plugin Tools",
+      "",
+      "You have explicit authorization to call the following tools. To call any of these tools,",
+      "execute the shell wrapper in the workspace:",
+      "```bash",
+      "scripts/paperclip-execute-tool.sh --tool <ToolName> --parameters '<JsonString>'",
+      "```",
+      ""
+    ];
+
+    for (const namespacedName of allowedToolNames) {
+      const tool = toolDispatcher.getTool(namespacedName);
+      if (!tool) continue;
+
+      dynamicToolsMarkdown.push(
+        `## Tool: ${namespacedName}`,
+        `**Description**: ${tool.description}`,
+        "**Parameter Schema (JSON):**",
+        "```json",
+        JSON.stringify(tool.parametersSchema, null, 2),
+        "```",
+        ""
+      );
+    }
+
+    await fs.mkdir(skillsHome, { recursive: true });
+    await fs.writeFile(pluginToolsFilePath, dynamicToolsMarkdown.join("\n"), "utf8");
+  } else {
+    await fs.unlink(pluginToolsFilePath).catch(() => {});
+  }
+}
+
+export function getPluginToolsPrompt(
+  agent: { id?: string; permissions?: Record<string, any> },
+  toolDispatcher: PluginToolDispatcher | undefined,
+): string {
+  if (!toolDispatcher) return "";
+  const agentPermissions = agent.permissions as Record<string, any>;
+  const allowedMap = agentPermissions?.allowedPluginTools ?? {};
+  const allowedToolNames = Object.keys(allowedMap).filter(key => allowedMap[key] === true);
+
+  if (allowedToolNames.length === 0) return "";
+
+  const sections = [
+    "# Active Plugin Tools",
+    "",
+    "You have explicit authorization to call the following tools. To call any of these tools,",
+    "execute the shell wrapper in the workspace:",
+    "```bash",
+    "scripts/paperclip-execute-tool.sh --tool <ToolName> --parameters '<JsonString>'",
+    "```",
+    ""
+  ];
+
+  for (const namespacedName of allowedToolNames) {
+    const tool = toolDispatcher.getTool(namespacedName);
+    if (!tool) continue;
+
+    sections.push(
+      `## Tool: ${namespacedName}`,
+      `**Description**: ${tool.description}`,
+      "**Parameter Schema (JSON):**",
+      "```json",
+      JSON.stringify(tool.parametersSchema, null, 2),
+      "```",
+      ""
+    );
+  }
+
+  return sections.join("\n");
+}
+

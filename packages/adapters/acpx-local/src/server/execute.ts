@@ -27,6 +27,8 @@ import {
   shapePaperclipWorkspaceEnvForExecution,
   stringifyPaperclipWakePayload,
   type PaperclipSkillEntry,
+  injectPluginToolsSkill,
+  type PluginToolDispatcher,
 } from "@paperclipai/adapter-utils/server-utils";
 import { shellQuote } from "@paperclipai/adapter-utils/ssh";
 import {
@@ -306,16 +308,24 @@ async function prepareClaudeSkillRuntime(input: {
   stateDir: string;
   config: Record<string, unknown>;
   onLog: AdapterExecutionContext["onLog"];
+  agent: { id: string; permissions?: Record<string, any> };
+  toolDispatcher: PluginToolDispatcher | undefined;
 }): Promise<{
   identity: Record<string, unknown>;
   promptInstructions: string;
   commandNotes: string[];
 }> {
+  const agentPermissions = input.agent.permissions as Record<string, any>;
+  const allowedMap = agentPermissions?.allowedPluginTools ?? {};
+  const hasPluginTools = Object.keys(allowedMap).some((key) => allowedMap[key] === true);
+
   const { selectedSkills, desiredSkillNames } = await resolveSelectedRuntimeSkills(input.config);
   const skillSetKey = await buildSkillSetKey({ skills: selectedSkills, label: "claude" });
   const bundleRoot = path.join(input.stateDir, "runtime-skills", "claude", skillSetKey);
   const skillsHome = path.join(bundleRoot, ".claude", "skills");
   await fs.mkdir(skillsHome, { recursive: true });
+
+  await injectPluginToolsSkill(skillsHome, input.agent, input.toolDispatcher);
 
   for (const entry of selectedSkills) {
     const target = path.join(skillsHome, entry.runtimeName);
@@ -336,11 +346,12 @@ async function prepareClaudeSkillRuntime(input: {
   }
 
   const selectedNames = selectedSkills.map((entry) => entry.runtimeName).sort();
-  const promptInstructions = selectedSkills.length > 0
+  const promptInstructions = (selectedSkills.length > 0 || hasPluginTools)
     ? [
         "Paperclip has materialized selected runtime skills for this ACPX Claude session.",
         `Skill root: ${skillsHome}`,
         selectedNames.length > 0 ? `Selected skills: ${selectedNames.join(", ")}` : "",
+        hasPluginTools ? "Selected skills: plugin-tools.md" : "",
         "When a task calls for one of these skills, read its SKILL.md from that root and follow it.",
       ].filter(Boolean).join("\n")
     : "";
@@ -351,7 +362,7 @@ async function prepareClaudeSkillRuntime(input: {
       skillSetKey,
       desiredSkillNames,
       selectedSkills: selectedNames,
-      skillRoot: selectedSkills.length > 0 ? skillsHome : null,
+      skillRoot: (selectedSkills.length > 0 || hasPluginTools) ? skillsHome : null,
     },
     promptInstructions,
     commandNotes: selectedSkills.length > 0
@@ -434,6 +445,8 @@ async function prepareCodexSkillRuntime(input: {
   config: Record<string, unknown>;
   env: Record<string, string>;
   onLog: AdapterExecutionContext["onLog"];
+  agent: { id: string; permissions?: Record<string, any> };
+  toolDispatcher: PluginToolDispatcher | undefined;
 }): Promise<{ identity: Record<string, unknown>; commandNotes: string[] }> {
   const envConfig = parseObject(input.config.env);
   const configuredCodexHome =
@@ -462,6 +475,8 @@ async function prepareCodexSkillRuntime(input: {
     selectedSkills,
     onLog: input.onLog,
   });
+
+  await injectPluginToolsSkill(skillsHome, input.agent, input.toolDispatcher);
 
   for (const entry of selectedSkills) {
     const target = path.join(skillsHome, entry.runtimeName);
@@ -727,11 +742,17 @@ async function buildRuntime(input: {
   let skillPromptInstructions = "";
   let skillsIdentity: Record<string, unknown> = { mode: "unsupported" };
   const skillCommandNotes: string[] = [];
+  const globalPluginToolDispatcher = (input.ctx as any)?.globalPluginToolDispatcher as
+    | PluginToolDispatcher
+    | undefined;
+
   if (acpxAgent === "claude") {
     const preparedSkills = await prepareClaudeSkillRuntime({
       stateDir,
       config,
       onLog: input.ctx.onLog,
+      agent,
+      toolDispatcher: globalPluginToolDispatcher,
     });
     skillPromptInstructions = preparedSkills.promptInstructions;
     skillsIdentity = preparedSkills.identity;
@@ -742,6 +763,8 @@ async function buildRuntime(input: {
       config,
       env,
       onLog: input.ctx.onLog,
+      agent,
+      toolDispatcher: globalPluginToolDispatcher,
     });
     skillsIdentity = preparedSkills.identity;
     skillCommandNotes.push(...preparedSkills.commandNotes);
@@ -1442,6 +1465,12 @@ export function createAcpxLocalExecutor(deps: ExecuteDeps = {}) {
         resultJson: { phase: "turn" },
         summary: message,
       };
+    } finally {
+      if (prepared.acpxAgent === "claude" && prepared.skillsIdentity.skillRoot) {
+        await fs.rm(path.join(prepared.skillsIdentity.skillRoot as string, "plugin-tools.md"), { force: true }).catch(() => {});
+      } else if (prepared.acpxAgent === "codex" && prepared.skillsIdentity.skillsHome) {
+        await fs.rm(path.join(prepared.skillsIdentity.skillsHome as string, "plugin-tools.md"), { force: true }).catch(() => {});
+      }
     }
   };
 }
