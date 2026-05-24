@@ -1586,14 +1586,14 @@ function ConfigurationTab({
 
     const groups: Record<string, { plugin: any; tools: typeof pluginTools }> = {};
     for (const tool of pluginTools) {
-      const plugin = plugins.find((p) => p.id === tool.pluginId);
-      const pluginKey = plugin ? plugin.id : (tool.pluginId || "unknown");
+      const plugin = plugins.find((p) => p.pluginKey === tool.pluginId);
+      const pluginKey = plugin ? plugin.pluginKey : (tool.pluginId || "unknown");
       if (!groups[pluginKey]) {
         groups[pluginKey] = {
           plugin: plugin || {
-            id: pluginKey,
-            pluginKey: "unknown",
-            manifestJson: { displayName: "Unknown Plugin" },
+            id: pluginKey, // Use pluginKey as ID for fallback
+            pluginKey: pluginKey,
+            manifestJson: { displayName: tool.pluginId ? `${tool.pluginId} (Not Installed)` : "Unknown Plugin" },
           },
           tools: [],
         };
