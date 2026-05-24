@@ -219,6 +219,16 @@ export interface PluginToolDispatcher {
  * );
  * ```
  */
+let globalDispatcherInstance: PluginToolDispatcher | undefined;
+
+export function setGlobalPluginToolDispatcher(dispatcher: PluginToolDispatcher): void {
+  globalDispatcherInstance = dispatcher;
+}
+
+export function getGlobalPluginToolDispatcher(): PluginToolDispatcher | undefined {
+  return globalDispatcherInstance;
+}
+
 export function createPluginToolDispatcher(
   options: PluginToolDispatcherOptions = {},
 ): PluginToolDispatcher {
@@ -312,7 +322,7 @@ export function createPluginToolDispatcher(
   // Public API
   // -----------------------------------------------------------------------
 
-  return {
+  const dispatcher: PluginToolDispatcher = {
     async initialize(): Promise<void> {
       if (initialized) {
         log.warn("dispatcher already initialized, skipping");
@@ -445,4 +455,7 @@ export function createPluginToolDispatcher(
       return registry;
     },
   };
+
+  setGlobalPluginToolDispatcher(dispatcher);
+  return dispatcher;
 }

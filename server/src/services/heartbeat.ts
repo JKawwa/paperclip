@@ -165,6 +165,8 @@ import { environmentRuntimeService } from "./environment-runtime.js";
 import { environmentRunOrchestrator } from "./environment-run-orchestrator.js";
 import { isUnsafeSessionWorkspaceCwd } from "./session-workspace-cwd.js";
 import type { PluginWorkerManager } from "./plugin-worker-manager.js";
+import { getGlobalPluginToolDispatcher } from "./plugin-tool-dispatcher.js";
+import type { PluginToolDispatcher } from "./plugin-tool-dispatcher.js";
 
 const MAX_LIVE_LOG_CHUNK_BYTES = 8 * 1024;
 const MAX_PERSISTED_LOG_CHUNK_CHARS = 64 * 1024;
@@ -2309,6 +2311,7 @@ export type HeartbeatEnvironmentRuntime = ReturnType<typeof environmentRuntimeSe
 export interface HeartbeatServiceOptions {
   pluginWorkerManager?: PluginWorkerManager;
   environmentRuntime?: HeartbeatEnvironmentRuntime;
+  toolDispatcher?: PluginToolDispatcher;
 }
 
 export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) {
@@ -2316,6 +2319,8 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
   const getCurrentUserRedactionOptions = async () => ({
     enabled: (await instanceSettings.getGeneral()).censorUsernameInLogs,
   });
+
+  const toolDispatcher = options.toolDispatcher ?? getGlobalPluginToolDispatcher();
 
   const runLogStore = getRunLogStore();
   const secretsSvc = secretService(db);
@@ -7678,7 +7683,7 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
           : undefined,
         onLog,
         onMeta: onAdapterMeta,
-        onSpawn: async (meta) => {
+        onSpawn: async (meta: { pid: number; processGroupId: number | null; startedAt: string }) => {
           await persistRunProcessMetadata(run.id, {
             pid: meta.pid,
             processGroupId:
@@ -7689,7 +7694,8 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
           });
         },
         authToken: authToken ?? undefined,
-      });
+        globalPluginToolDispatcher: toolDispatcher,
+      } as any);
       const adapterManagedRuntimeServices = adapterResult.runtimeServices
         ? await persistAdapterManagedRuntimeServices({
             db,
