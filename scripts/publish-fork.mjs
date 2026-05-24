@@ -62,27 +62,24 @@ console.log(`Fork publish: ${ordered.length} packages as ${FORK_SCOPE}/${FORK_PR
 
 // ── Build step ──
 if (!skipBuild) {
-  const cliEntry = packages.find(p => p.name === 'paperclipai');
-  if (cliEntry) {
-    console.log('==> Building CLI...');
-    const cliDir = join(REPO_ROOT, 'cli');
-    execSync(
-      `node --input-type=module -e "import esbuild from 'esbuild'; import config from './esbuild.config.mjs'; await esbuild.build(config);"`,
-      { cwd: cliDir, stdio: 'inherit' }
-    );
-  }
-
   for (const entry of ordered) {
-      if (entry.name === 'paperclipai') continue;
-      const buildScript = entry.pkg.scripts?.build;
-      if (!buildScript) {
-        console.log(`  ${entry.name}: no build script, skipping.`);
-        continue;
-      }
+    const buildScript = entry.pkg.scripts?.build;
+    if (!buildScript) {
+      console.log(`  ${entry.name}: no build script, skipping.`);
+      continue;
+    }
 
-      console.log(`==> Building ${entry.name}...`);
+    console.log(`==> Building ${entry.name}...`);
+    if (entry.name === 'paperclipai') {
+      const cliDir = join(REPO_ROOT, 'cli');
+      execSync(
+        `node --input-type=module -e "import esbuild from 'esbuild'; import config from './esbuild.config.mjs'; await esbuild.build(config);"`,
+        { cwd: cliDir, stdio: 'inherit' }
+      );
+    } else {
       execSync(`pnpm --filter "${entry.name}" build`, { cwd: REPO_ROOT, stdio: 'inherit' });
     }
+  }
 } else {
   console.log('Build step skipped (--skip-build).\n');
 }
