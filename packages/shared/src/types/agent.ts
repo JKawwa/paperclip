@@ -12,6 +12,7 @@ import type {
 
 export interface AgentPermissions {
   canCreateAgents: boolean;
+  allowedPluginTools?: Record<string, boolean>;
 }
 
 export interface AgentModelProfileConfig {

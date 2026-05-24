@@ -67,6 +67,7 @@ export interface AgentHireResponse {
 export interface AgentPermissionUpdate {
   canCreateAgents: boolean;
   canAssignTasks: boolean;
+  allowedPluginTools?: Record<string, boolean>;
 }
 
 export interface AgentWakeRequest {

@@ -620,14 +620,24 @@ export function pluginRoutes(
     return companyId;
   }
 
-  async function validateToolRunContextScope(runContext: ToolRunContext): Promise<string | null> {
+  async function validateToolRunContextScope(
+    runContext: ToolRunContext,
+    tool?: string,
+  ): Promise<string | null> {
     const [agent] = await db
-      .select({ companyId: agents.companyId })
+      .select({ companyId: agents.companyId, permissions: agents.permissions })
       .from(agents)
       .where(eq(agents.id, runContext.agentId))
       .limit(1);
     if (!agent || agent.companyId !== runContext.companyId) {
       return '"runContext.agentId" does not belong to "runContext.companyId"';
+    }
+
+    if (tool) {
+      const allowedPluginTools = (agent.permissions as any)?.allowedPluginTools ?? {};
+      if (allowedPluginTools[tool] !== true) {
+        return `Access Denied: Agent does not have permission to execute tool "${tool}".`;
+      }
     }
 
     const [run] = await db
@@ -848,7 +858,7 @@ export function pluginRoutes(
     }
 
     assertCompanyAccess(req, runContext.companyId);
-    const scopeError = await validateToolRunContextScope(runContext);
+    const scopeError = await validateToolRunContextScope(runContext, tool);
     if (scopeError) {
       res.status(403).json({ error: scopeError });
       return;

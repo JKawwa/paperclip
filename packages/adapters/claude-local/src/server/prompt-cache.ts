@@ -139,7 +139,7 @@ export async function prepareClaudePromptBundle(input: {
   skills: SkillEntry[];
   instructionsContents: string | null;
   onLog: AdapterExecutionContext["onLog"];
-  toolDispatcher: PluginToolDispatcher;
+  toolDispatcher: PluginToolDispatcher | undefined;
   agent: { id: string; permissions?: Record<string, any> };
 }): Promise<ClaudePromptBundle> {
   const { companyId, skills, instructionsContents, onLog, toolDispatcher, agent } = input;
