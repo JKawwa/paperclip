@@ -346,12 +346,13 @@ async function prepareClaudeSkillRuntime(input: {
   }
 
   const selectedNames = selectedSkills.map((entry) => entry.runtimeName).sort();
+  const agentId = input.agent.id.toLowerCase().replace(/[^a-z0-9_-]/g, "");
   const promptInstructions = (selectedSkills.length > 0 || hasPluginTools)
     ? [
         "Paperclip has materialized selected runtime skills for this ACPX Claude session.",
         `Skill root: ${skillsHome}`,
         selectedNames.length > 0 ? `Selected skills: ${selectedNames.join(", ")}` : "",
-        hasPluginTools ? "Selected skills: plugin-tools.md" : "",
+        hasPluginTools ? `Selected skills: plugin-tools-${agentId}` : "",
         "When a task calls for one of these skills, read its SKILL.md from that root and follow it.",
       ].filter(Boolean).join("\n")
     : "";
@@ -1466,9 +1467,12 @@ export function createAcpxLocalExecutor(deps: ExecuteDeps = {}) {
         summary: message,
       };
     } finally {
+      const agentId = ctx.agent.id.toLowerCase().replace(/[^a-z0-9_-]/g, "");
       if (prepared.acpxAgent === "claude" && prepared.skillsIdentity.skillRoot) {
+        await fs.rm(path.join(prepared.skillsIdentity.skillRoot as string, `plugin-tools-${agentId}`), { recursive: true, force: true }).catch(() => {});
         await fs.rm(path.join(prepared.skillsIdentity.skillRoot as string, "plugin-tools.md"), { force: true }).catch(() => {});
       } else if (prepared.acpxAgent === "codex" && prepared.skillsIdentity.skillsHome) {
+        await fs.rm(path.join(prepared.skillsIdentity.skillsHome as string, `plugin-tools-${agentId}`), { recursive: true, force: true }).catch(() => {});
         await fs.rm(path.join(prepared.skillsIdentity.skillsHome as string, "plugin-tools.md"), { force: true }).catch(() => {});
       }
     }

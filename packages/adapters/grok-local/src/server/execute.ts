@@ -581,9 +581,11 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
 
     return toResult(initial);
   } finally {
+    const agentId = agent.id.toLowerCase().replace(/[^a-z0-9_-]/g, "");
     await Promise.all([
       restoreRemoteWorkspace?.(),
       stagedAssets.cleanup(),
+      fs.rm(path.join(cwd, ".claude", "skills", `plugin-tools-${agentId}`), { recursive: true, force: true }).catch(() => {}),
       fs.rm(path.join(cwd, ".claude", "skills", "plugin-tools.md"), { force: true }).catch(() => {}),
     ]);
   }
