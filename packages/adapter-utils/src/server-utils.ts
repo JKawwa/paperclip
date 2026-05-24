@@ -2119,9 +2119,17 @@ export async function injectPluginToolsSkill(
   agent: { id: string; permissions?: Record<string, any> },
   toolDispatcher: PluginToolDispatcher | undefined,
 ): Promise<void> {
-  const pluginToolsFilePath = path.join(skillsHome, "plugin-tools.md");
+  const agentId = agent.id.toLowerCase().replace(/[^a-z0-9_-]/g, "");
+  const skillDirName = `plugin-tools-${agentId}`;
+  const pluginToolsDir = path.join(skillsHome, skillDirName);
+  const pluginToolsFilePath = path.join(pluginToolsDir, "SKILL.md");
+
+  // Clean up legacy flat file
+  const legacyPluginToolsFilePath = path.join(skillsHome, "plugin-tools.md");
+  await fs.unlink(legacyPluginToolsFilePath).catch(() => {});
+
   if (!toolDispatcher) {
-    await fs.unlink(pluginToolsFilePath).catch(() => {});
+    await fs.rm(pluginToolsDir, { recursive: true, force: true }).catch(() => {});
     return;
   }
 
@@ -2132,7 +2140,7 @@ export async function injectPluginToolsSkill(
   if (allowedToolNames.length > 0) {
     const dynamicToolsMarkdown = [
       "---",
-      "name: plugin-tools",
+      `name: ${skillDirName}`,
       "description: Executable third-party integration tools assigned to you.",
       "---",
       "# Active Plugin Tools",
@@ -2160,10 +2168,10 @@ export async function injectPluginToolsSkill(
       );
     }
 
-    await fs.mkdir(skillsHome, { recursive: true });
+    await fs.mkdir(pluginToolsDir, { recursive: true });
     await fs.writeFile(pluginToolsFilePath, dynamicToolsMarkdown.join("\n"), "utf8");
   } else {
-    await fs.unlink(pluginToolsFilePath).catch(() => {});
+    await fs.rm(pluginToolsDir, { recursive: true, force: true }).catch(() => {});
   }
 }
 

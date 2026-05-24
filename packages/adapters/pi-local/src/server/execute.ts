@@ -815,10 +815,12 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
 
     return toResult(initial);
   } finally {
+    const agentId = agent.id.toLowerCase().replace(/[^a-z0-9_-]/g, "");
     await Promise.all([
       paperclipBridge?.stop(),
       restoreRemoteWorkspace?.(),
       localSkillsDir ? fs.rm(path.dirname(localSkillsDir), { recursive: true, force: true }).catch(() => undefined) : Promise.resolve(),
+      fs.rm(path.join(PI_AGENT_SKILLS_DIR, `plugin-tools-${agentId}`), { recursive: true, force: true }).catch(() => {}),
       fs.rm(path.join(PI_AGENT_SKILLS_DIR, "plugin-tools.md"), { force: true }).catch(() => {}),
     ]);
   }

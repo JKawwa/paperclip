@@ -859,6 +859,8 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       );
       await restoreRemoteWorkspace();
     }
+    const agentId = agent.id.toLowerCase().replace(/[^a-z0-9_-]/g, "");
+    await fs.rm(path.join(codexSkillsDir, `plugin-tools-${agentId}`), { recursive: true, force: true }).catch(() => {});
     await fs.rm(path.join(codexSkillsDir, "plugin-tools.md"), { force: true }).catch(() => {});
   }
 }
