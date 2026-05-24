@@ -761,6 +761,8 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     if (localSkillsDir) {
       await fs.rm(localSkillsDir, { recursive: true, force: true }).catch(() => undefined);
     }
+    const agentId = agent.id.toLowerCase().replace(/[^a-z0-9_-]/g, "");
+    await fs.rm(path.join(cursorSkillsHome(), `plugin-tools-${agentId}`), { recursive: true, force: true }).catch(() => {});
     await fs.rm(path.join(cursorSkillsHome(), "plugin-tools.md"), { force: true }).catch(() => {});
   }
 }
