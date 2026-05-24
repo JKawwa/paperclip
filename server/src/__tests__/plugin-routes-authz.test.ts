@@ -541,7 +541,7 @@ describe.sequential("plugin tool and bridge authz", () => {
     const executeTool = vi.fn().mockResolvedValue({ content: "ok" });
     const { app } = await createApp(boardActor(), {}, {
       db: createSelectQueueDb([
-        [{ companyId: companyA }],
+        [{ companyId: companyA, permissions: { allowedPluginTools: { "paperclip.example:search": true } } }],
         [{ companyId: companyA, agentId: agentA }],
         [{ companyId: companyA }],
       ]),
@@ -578,6 +578,41 @@ describe.sequential("plugin tool and bridge authz", () => {
         projectId: projectA,
       },
     );
+  });
+
+  it("rejects tool execution when the agent does not have permission to execute the tool", async () => {
+    const executeTool = vi.fn();
+    const { app } = await createApp(boardActor(), {}, {
+      db: createSelectQueueDb([
+        [{ companyId: companyA, permissions: { allowedPluginTools: { "paperclip.example:search": false } } }],
+        [{ companyId: companyA, agentId: agentA }],
+        [{ companyId: companyA }],
+      ]),
+      toolDeps: {
+        toolDispatcher: {
+          listToolsForAgent: vi.fn(),
+          getTool: vi.fn(() => ({ name: "paperclip.example:search" })),
+          executeTool,
+        },
+      },
+    });
+
+    const res = await request(app)
+      .post("/api/plugins/tools/execute")
+      .send({
+        tool: "paperclip.example:search",
+        parameters: { q: "test" },
+        runContext: {
+          agentId: agentA,
+          runId: runA,
+          companyId: companyA,
+          projectId: projectA,
+        },
+      });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toContain("does not have permission to execute");
+    expect(executeTool).not.toHaveBeenCalled();
   });
 
   it.each([

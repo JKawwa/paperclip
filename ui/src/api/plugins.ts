@@ -189,6 +189,14 @@ export interface PluginLocalFolderSaveInput {
   requiredFiles?: string[];
 }
 
+export interface AgentToolDescriptor {
+  name: string;
+  displayName: string;
+  description: string;
+  parametersSchema: Record<string, unknown>;
+  pluginId: string;
+}
+
 /**
  * Plugin management API client.
  *
@@ -213,6 +221,12 @@ export const pluginsApi = {
    */
   list: (status?: PluginStatus) =>
     api.get<PluginRecord[]>(`/plugins${status ? `?status=${status}` : ""}`),
+
+  /**
+   * List all dynamic plugin-contributed agent tools.
+   */
+  listTools: (pluginId?: string) =>
+    api.get<AgentToolDescriptor[]>(`/plugins/tools${pluginId ? `?pluginId=${encodeURIComponent(pluginId)}` : ""}`),
 
   /**
    * List bundled example plugins available from the current repo checkout.
