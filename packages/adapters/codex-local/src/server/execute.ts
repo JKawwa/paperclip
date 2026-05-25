@@ -38,6 +38,7 @@ import {
   DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE,
   joinPromptSections,
   injectPluginToolsSkill,
+  getPluginToolsPrompt,
   type PluginToolDispatcher,
 } from "@paperclipai/adapter-utils/server-utils";
 import {
@@ -666,12 +667,14 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   }
   const renderedPrompt = shouldUseResumeDeltaPrompt ? "" : renderTemplate(promptTemplate, templateData);
   const sessionHandoffNote = asString(context.paperclipSessionHandoffMarkdown, "").trim();
+  const toolsPrompt = getPluginToolsPrompt(agent, globalPluginToolDispatcher);
   const prompt = joinPromptSections([
     promptInstructionsPrefix,
     renderedBootstrapPrompt,
     wakePrompt,
     codexFallbackHandoffNote,
     sessionHandoffNote,
+    toolsPrompt,
     renderedPrompt,
   ]);
   const promptMetrics = {

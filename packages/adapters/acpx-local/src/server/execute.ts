@@ -28,6 +28,7 @@ import {
   stringifyPaperclipWakePayload,
   type PaperclipSkillEntry,
   injectPluginToolsSkill,
+  getPluginToolsPrompt,
   type PluginToolDispatcher,
 } from "@paperclipai/adapter-utils/server-utils";
 import { shellQuote } from "@paperclipai/adapter-utils/ssh";
@@ -941,12 +942,17 @@ async function buildPrompt(ctx: AdapterExecutionContext, resumedSession: boolean
   const renderedPrompt = shouldUseResumeDeltaPrompt ? "" : renderTemplate(promptTemplate, templateData);
   const sessionHandoffNote = asString(context.paperclipSessionHandoffMarkdown, "").trim();
   const taskContextNote = asString(context.paperclipTaskMarkdown, "").trim();
+  const globalPluginToolDispatcher = (ctx as any)?.globalPluginToolDispatcher as
+    | PluginToolDispatcher
+    | undefined;
+  const toolsPrompt = getPluginToolsPrompt(agent, globalPluginToolDispatcher);
   const prompt = joinPromptSections([
     promptInstructionsPrefix,
     renderedBootstrapPrompt,
     wakePrompt,
     sessionHandoffNote,
     taskContextNote,
+    toolsPrompt,
     renderedPrompt,
   ]);
 
