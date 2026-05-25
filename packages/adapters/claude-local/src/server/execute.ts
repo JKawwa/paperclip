@@ -44,6 +44,7 @@ import {
   shapePaperclipWorkspaceEnvForExecution,
   stringifyPaperclipWakePayload,
   DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE,
+  getPluginToolsPrompt,
 } from "@paperclipai/adapter-utils/server-utils";
 // PluginToolDispatcher is provided by the server context at runtime
 interface PluginToolDispatcher {
@@ -465,6 +466,11 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   const globalPluginToolDispatcher = (ctx as any)?.globalPluginToolDispatcher as
     | PluginToolDispatcher
     | undefined;
+
+  const toolsPrompt = getPluginToolsPrompt(agent, globalPluginToolDispatcher);
+  if (toolsPrompt) {
+    combinedInstructionsContents = (combinedInstructionsContents ?? "") + "\n\n" + toolsPrompt;
+  }
 
   const promptBundle = await prepareClaudePromptBundle({
     companyId: agent.companyId,

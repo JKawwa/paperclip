@@ -38,6 +38,7 @@ import {
   refreshPaperclipWorkspaceEnvForExecution,
   DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE,
   injectPluginToolsSkill,
+  getPluginToolsPrompt,
   type PluginToolDispatcher,
 } from "@paperclipai/adapter-utils/server-utils";
 import { DEFAULT_GROK_LOCAL_MODEL } from "../index.js";
@@ -419,11 +420,13 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     const sessionHandoffNote = asString(context.paperclipSessionHandoffMarkdown, "").trim();
     const paperclipEnvNote = renderPaperclipEnvNote(env);
     const apiAccessNote = renderApiAccessNote(env);
+    const toolsPrompt = getPluginToolsPrompt(agent, globalPluginToolDispatcher);
     const prompt = joinPromptSections([
       wakePrompt,
       sessionHandoffNote,
       paperclipEnvNote,
       apiAccessNote,
+      toolsPrompt,
       renderedPrompt,
     ]);
     const promptMetrics = {

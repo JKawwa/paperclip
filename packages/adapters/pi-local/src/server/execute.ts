@@ -45,6 +45,7 @@ import {
   DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE,
   runChildProcess,
   injectPluginToolsSkill,
+  getPluginToolsPrompt,
   type PluginToolDispatcher,
 } from "@paperclipai/adapter-utils/server-utils";
 import { shellQuote } from "@paperclipai/adapter-utils/ssh";
@@ -573,6 +574,11 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     }
   } else {
     systemPromptExtension = promptTemplate;
+  }
+
+  const toolsPrompt = getPluginToolsPrompt(agent, globalPluginToolDispatcher);
+  if (toolsPrompt) {
+    systemPromptExtension = systemPromptExtension + "\n\n" + toolsPrompt;
   }
 
   const bootstrapPromptTemplate = asString(config.bootstrapPromptTemplate, "");
