@@ -871,23 +871,53 @@ export function pluginRoutes(
       return;
     }
 
-    try {
-      const result = await toolDeps.toolDispatcher.executeTool(
-        tool,
-        parameters ?? {},
-        runContext,
-      );
-      res.json(result);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+     try {
+       const result = await toolDeps.toolDispatcher.executeTool(
+         tool,
+         parameters ?? {},
+         runContext,
+       );
+       res.json(result);
+     } catch (err) {
+       const message = err instanceof Error ? err.message : String(err);
 
-      // Distinguish between "worker not running" (502) and other errors (500)
-      if (message.includes("not running") || message.includes("worker")) {
-        res.status(502).json({ error: message });
-      } else {
-        res.status(500).json({ error: message });
-      }
-    }
+       // Check if this is an internal agent request (legacy format expected)
+       const isAgentRequest = req.headers["user-agent"]?.includes("Paperclip-Agent");
+
+       // Distinguish between different error types for better agent feedback
+       if (message.includes("not running") || message.includes("worker")) {
+         // Extract plugin ID from the error message to provide more context
+         const pluginIdMatch = message.match(/plugin "([^"]+)"/);
+         const pluginId = pluginIdMatch ? pluginIdMatch[1] : "unknown";
+         const errorMessage = `Plugin worker for "${pluginId}" is not running. ` +
+                              `The plugin may have failed to start or crashed. ` +
+                              `Check server logs for details.`;
+
+         if (isAgentRequest) {
+           // Legacy format for internal agent compatibility
+           res.status(502).json({ error: errorMessage });
+         } else {
+           // Richer format for UI and other external callers
+           res.status(502).json({
+             error: errorMessage,
+             details: message,
+             errorType: "worker_unavailable"
+           });
+         }
+       } else if (message.includes("not found")) {
+         if (isAgentRequest) {
+           res.status(404).json({ error: message });
+         } else {
+           res.status(404).json({ error: message, errorType: "tool_not_found" });
+         }
+       } else {
+         if (isAgentRequest) {
+           res.status(500).json({ error: message });
+         } else {
+           res.status(500).json({ error: message, errorType: "tool_execution_error" });
+         }
+       }
+     }
   });
 
   /**

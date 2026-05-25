@@ -77,6 +77,7 @@ import { redactEventPayload } from "../redaction.js";
 import { redactCurrentUserValue } from "../log-redaction.js";
 import { renderOrgChartSvg, renderOrgChartPng, type OrgNode, type OrgChartStyle, ORG_CHART_STYLES } from "./org-chart-svg.js";
 import { instanceSettingsService } from "../services/instance-settings.js";
+import { getGlobalPluginToolDispatcher } from "../services/plugin-tool-dispatcher.js";
 import { runClaudeLogin } from "@paperclipai/adapter-claude-local/server";
 import {
   DEFAULT_ACPX_LOCAL_AGENT,
@@ -1732,7 +1733,22 @@ export function agentRoutes(
       res.status(404).json({ error: "Agent not found" });
       return;
     }
-    res.json(await buildAgentDetail(agent));
+
+    // Retrieve plugin tools if dispatcher is available
+    const dispatcher = getGlobalPluginToolDispatcher();
+    const pluginTools = dispatcher ? dispatcher.listToolsForAgent() : [];
+
+    // Merge core capabilities with plugin tools
+    const agentDetail = await buildAgentDetail(agent);
+    const response = {
+      ...agentDetail,
+      // Preserve existing capabilities field if present
+      capabilities: agentDetail.capabilities ?? null,
+      // Add a new field `pluginTools` containing the list of plugin-contributed tools
+      pluginTools,
+    };
+
+    res.json(response);
   });
 
   router.get("/agents/me/inbox-lite", async (req, res) => {
