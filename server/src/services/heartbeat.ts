@@ -2320,7 +2320,8 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
     enabled: (await instanceSettings.getGeneral()).censorUsernameInLogs,
   });
 
-  const toolDispatcher = options.toolDispatcher ?? getGlobalPluginToolDispatcher();
+  const toolDispatcher = options.toolDispatcher ?? null;
+  const getToolDispatcher = () => toolDispatcher ?? getGlobalPluginToolDispatcher();
 
   const runLogStore = getRunLogStore();
   const secretsSvc = secretService(db);
@@ -7694,7 +7695,7 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
           });
         },
         authToken: authToken ?? undefined,
-        globalPluginToolDispatcher: toolDispatcher,
+        globalPluginToolDispatcher: getToolDispatcher(),
       } as any);
       const adapterManagedRuntimeServices = adapterResult.runtimeServices
         ? await persistAdapterManagedRuntimeServices({

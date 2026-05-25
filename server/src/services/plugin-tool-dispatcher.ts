@@ -225,7 +225,10 @@ export function setGlobalPluginToolDispatcher(dispatcher: PluginToolDispatcher):
   globalDispatcherInstance = dispatcher;
 }
 
-export function getGlobalPluginToolDispatcher(): PluginToolDispatcher | undefined {
+export function getGlobalPluginToolDispatcher(): PluginToolDispatcher {
+  if (!globalDispatcherInstance) {
+    throw new Error("Plugin tool dispatcher not initialized. Call createPluginToolDispatcher() first.");
+  }
   return globalDispatcherInstance;
 }
 
