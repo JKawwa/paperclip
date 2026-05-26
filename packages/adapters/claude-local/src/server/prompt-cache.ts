@@ -7,8 +7,6 @@ import {
   ensurePaperclipSkillSymlink,
   resolvePaperclipInstanceRootForAdapter,
   type PaperclipSkillEntry,
-  injectPluginToolsSkill,
-  type PluginToolDispatcher,
 } from "@paperclipai/adapter-utils/server-utils";
 
 type SkillEntry = PaperclipSkillEntry;
@@ -139,10 +137,8 @@ export async function prepareClaudePromptBundle(input: {
   skills: SkillEntry[];
   instructionsContents: string | null;
   onLog: AdapterExecutionContext["onLog"];
-  toolDispatcher: PluginToolDispatcher | undefined;
-  agent: { id: string; permissions?: Record<string, any> };
 }): Promise<ClaudePromptBundle> {
-  const { companyId, skills, instructionsContents, onLog, toolDispatcher, agent } = input;
+  const { companyId, skills, instructionsContents, onLog } = input;
   const bundleKey = await buildClaudePromptBundleKey({
     skills,
     instructionsContents,
@@ -150,9 +146,6 @@ export async function prepareClaudePromptBundle(input: {
   const rootDir = path.join(resolveManagedClaudePromptCacheRoot(process.env, companyId), bundleKey);
   const skillsHome = path.join(rootDir, ".claude", "skills");
   await fs.mkdir(skillsHome, { recursive: true });
-
-  // Generate dynamic plugin-tools.md for allowed tools
-  await injectPluginToolsSkill(skillsHome, agent, toolDispatcher);
 
   for (const entry of skills) {
     const target = path.join(skillsHome, entry.runtimeName);

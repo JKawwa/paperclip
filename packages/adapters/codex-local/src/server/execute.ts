@@ -37,9 +37,6 @@ import {
   stringifyPaperclipWakePayload,
   DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE,
   joinPromptSections,
-  injectPluginToolsSkill,
-  getPluginToolsPrompt,
-  type PluginToolDispatcher,
 } from "@paperclipai/adapter-utils/server-utils";
 import {
   parseCodexJsonl,
@@ -287,9 +284,6 @@ export async function ensureCodexSkillsInjected(
 
 export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExecutionResult> {
   const { runId, agent, runtime, config, context, onLog, onMeta, onSpawn, authToken } = ctx;
-  const globalPluginToolDispatcher = (ctx as any)?.globalPluginToolDispatcher as
-    | PluginToolDispatcher
-    | undefined;
 
   const promptTemplate = asString(
     config.promptTemplate,
@@ -365,7 +359,6 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       desiredSkillNames,
     },
   );
-  await injectPluginToolsSkill(codexSkillsDir, agent, globalPluginToolDispatcher);
   const timeoutSec = resolveAdapterExecutionTargetTimeoutSec(
     executionTarget,
     asNumber(config.timeoutSec, 0),
@@ -667,14 +660,12 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   }
   const renderedPrompt = shouldUseResumeDeltaPrompt ? "" : renderTemplate(promptTemplate, templateData);
   const sessionHandoffNote = asString(context.paperclipSessionHandoffMarkdown, "").trim();
-  const toolsPrompt = getPluginToolsPrompt(agent, globalPluginToolDispatcher);
   const prompt = joinPromptSections([
     promptInstructionsPrefix,
     renderedBootstrapPrompt,
     wakePrompt,
     codexFallbackHandoffNote,
     sessionHandoffNote,
-    toolsPrompt,
     renderedPrompt,
   ]);
   const promptMetrics = {
@@ -863,7 +854,5 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       await restoreRemoteWorkspace();
     }
     const agentId = agent.id.toLowerCase().replace(/[^a-z0-9_-]/g, "");
-    await fs.rm(path.join(codexSkillsDir, `plugin-tools-${agentId}`), { recursive: true, force: true }).catch(() => {});
-    await fs.rm(path.join(codexSkillsDir, "plugin-tools.md"), { force: true }).catch(() => {});
   }
 }

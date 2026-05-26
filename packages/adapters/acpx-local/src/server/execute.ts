@@ -27,9 +27,6 @@ import {
   shapePaperclipWorkspaceEnvForExecution,
   stringifyPaperclipWakePayload,
   type PaperclipSkillEntry,
-  injectPluginToolsSkill,
-  getPluginToolsPrompt,
-  type PluginToolDispatcher,
 } from "@paperclipai/adapter-utils/server-utils";
 import { shellQuote } from "@paperclipai/adapter-utils/ssh";
 import {
@@ -310,7 +307,6 @@ async function prepareClaudeSkillRuntime(input: {
   config: Record<string, unknown>;
   onLog: AdapterExecutionContext["onLog"];
   agent: { id: string; permissions?: Record<string, any> };
-  toolDispatcher: PluginToolDispatcher | undefined;
 }): Promise<{
   identity: Record<string, unknown>;
   promptInstructions: string;
@@ -325,8 +321,6 @@ async function prepareClaudeSkillRuntime(input: {
   const bundleRoot = path.join(input.stateDir, "runtime-skills", "claude", skillSetKey);
   const skillsHome = path.join(bundleRoot, ".claude", "skills");
   await fs.mkdir(skillsHome, { recursive: true });
-
-  await injectPluginToolsSkill(skillsHome, input.agent, input.toolDispatcher);
 
   for (const entry of selectedSkills) {
     const target = path.join(skillsHome, entry.runtimeName);
@@ -353,7 +347,6 @@ async function prepareClaudeSkillRuntime(input: {
         "Paperclip has materialized selected runtime skills for this ACPX Claude session.",
         `Skill root: ${skillsHome}`,
         selectedNames.length > 0 ? `Selected skills: ${selectedNames.join(", ")}` : "",
-        hasPluginTools ? `Selected skills: plugin-tools-${agentId}` : "",
         "When a task calls for one of these skills, read its SKILL.md from that root and follow it.",
       ].filter(Boolean).join("\n")
     : "";
@@ -448,7 +441,6 @@ async function prepareCodexSkillRuntime(input: {
   env: Record<string, string>;
   onLog: AdapterExecutionContext["onLog"];
   agent: { id: string; permissions?: Record<string, any> };
-  toolDispatcher: PluginToolDispatcher | undefined;
 }): Promise<{ identity: Record<string, unknown>; commandNotes: string[] }> {
   const envConfig = parseObject(input.config.env);
   const configuredCodexHome =
@@ -477,8 +469,6 @@ async function prepareCodexSkillRuntime(input: {
     selectedSkills,
     onLog: input.onLog,
   });
-
-  await injectPluginToolsSkill(skillsHome, input.agent, input.toolDispatcher);
 
   for (const entry of selectedSkills) {
     const target = path.join(skillsHome, entry.runtimeName);
@@ -744,9 +734,6 @@ async function buildRuntime(input: {
   let skillPromptInstructions = "";
   let skillsIdentity: Record<string, unknown> = { mode: "unsupported" };
   const skillCommandNotes: string[] = [];
-  const globalPluginToolDispatcher = (input.ctx as any)?.globalPluginToolDispatcher as
-    | PluginToolDispatcher
-    | undefined;
 
   if (acpxAgent === "claude") {
     const preparedSkills = await prepareClaudeSkillRuntime({
@@ -754,7 +741,6 @@ async function buildRuntime(input: {
       config,
       onLog: input.ctx.onLog,
       agent,
-      toolDispatcher: globalPluginToolDispatcher,
     });
     skillPromptInstructions = preparedSkills.promptInstructions;
     skillsIdentity = preparedSkills.identity;
@@ -766,7 +752,6 @@ async function buildRuntime(input: {
       env,
       onLog: input.ctx.onLog,
       agent,
-      toolDispatcher: globalPluginToolDispatcher,
     });
     skillsIdentity = preparedSkills.identity;
     skillCommandNotes.push(...preparedSkills.commandNotes);
@@ -942,17 +927,12 @@ async function buildPrompt(ctx: AdapterExecutionContext, resumedSession: boolean
   const renderedPrompt = shouldUseResumeDeltaPrompt ? "" : renderTemplate(promptTemplate, templateData);
   const sessionHandoffNote = asString(context.paperclipSessionHandoffMarkdown, "").trim();
   const taskContextNote = asString(context.paperclipTaskMarkdown, "").trim();
-  const globalPluginToolDispatcher = (ctx as any)?.globalPluginToolDispatcher as
-    | PluginToolDispatcher
-    | undefined;
-  const toolsPrompt = getPluginToolsPrompt(agent, globalPluginToolDispatcher);
   const prompt = joinPromptSections([
     promptInstructionsPrefix,
     renderedBootstrapPrompt,
     wakePrompt,
     sessionHandoffNote,
     taskContextNote,
-    toolsPrompt,
     renderedPrompt,
   ]);
 
@@ -1474,13 +1454,6 @@ export function createAcpxLocalExecutor(deps: ExecuteDeps = {}) {
       };
     } finally {
       const agentId = ctx.agent.id.toLowerCase().replace(/[^a-z0-9_-]/g, "");
-      if (prepared.acpxAgent === "claude" && prepared.skillsIdentity.skillRoot) {
-        await fs.rm(path.join(prepared.skillsIdentity.skillRoot as string, `plugin-tools-${agentId}`), { recursive: true, force: true }).catch(() => {});
-        await fs.rm(path.join(prepared.skillsIdentity.skillRoot as string, "plugin-tools.md"), { force: true }).catch(() => {});
-      } else if (prepared.acpxAgent === "codex" && prepared.skillsIdentity.skillsHome) {
-        await fs.rm(path.join(prepared.skillsIdentity.skillsHome as string, `plugin-tools-${agentId}`), { recursive: true, force: true }).catch(() => {});
-        await fs.rm(path.join(prepared.skillsIdentity.skillsHome as string, "plugin-tools.md"), { force: true }).catch(() => {});
-      }
     }
   };
 }

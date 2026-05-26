@@ -43,9 +43,6 @@ import {
   stringifyPaperclipWakePayload,
   DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE,
   joinPromptSections,
-  injectPluginToolsSkill,
-  getPluginToolsPrompt,
-  type PluginToolDispatcher,
 } from "@paperclipai/adapter-utils/server-utils";
 import { DEFAULT_CURSOR_LOCAL_MODEL, SANDBOX_INSTALL_COMMAND } from "../index.js";
 import { parseCursorJsonl, isCursorUnknownSessionError } from "./parse.js";
@@ -212,10 +209,6 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   const model = asString(config.model, DEFAULT_CURSOR_LOCAL_MODEL).trim();
   const mode = normalizeMode(asString(config.mode, ""));
 
-  const globalPluginToolDispatcher = (ctx as any)?.globalPluginToolDispatcher as
-    | PluginToolDispatcher
-    | undefined;
-
   const workspaceContext = parseObject(context.paperclipWorkspace);
   const workspaceCwd = asString(workspaceContext.cwd, "");
   const workspaceSource = asString(workspaceContext.source, "");
@@ -240,7 +233,6 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     await ensureCursorSkillsInjected(onLog, {
       skillsEntries: cursorSkillEntries.filter((entry) => desiredCursorSkillNames.includes(entry.key)),
     });
-    await injectPluginToolsSkill(cursorSkillsHome(), agent, globalPluginToolDispatcher);
   }
 
   const envConfig = parseObject(config.env);
@@ -360,7 +352,6 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   if (executionTargetIsRemote) {
     try {
       localSkillsDir = await buildCursorSkillsDir(config);
-      await injectPluginToolsSkill(localSkillsDir, agent, globalPluginToolDispatcher);
       await onLog(
         "stdout",
         `[paperclip] Syncing workspace and Cursor runtime assets to ${describeAdapterExecutionTarget(executionTarget)}.\n`,
@@ -568,14 +559,12 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   const renderedPrompt = shouldUseResumeDeltaPrompt ? "" : renderTemplate(promptTemplate, templateData);
   const sessionHandoffNote = asString(context.paperclipSessionHandoffMarkdown, "").trim();
   const paperclipEnvNote = renderPaperclipEnvNote(env);
-  const toolsPrompt = getPluginToolsPrompt(agent, globalPluginToolDispatcher);
   const prompt = joinPromptSections([
     instructionsPrefix,
     renderedBootstrapPrompt,
     wakePrompt,
     sessionHandoffNote,
     paperclipEnvNote,
-    toolsPrompt,
     renderedPrompt,
   ]);
   const promptMetrics = {
@@ -765,7 +754,5 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       await fs.rm(localSkillsDir, { recursive: true, force: true }).catch(() => undefined);
     }
     const agentId = agent.id.toLowerCase().replace(/[^a-z0-9_-]/g, "");
-    await fs.rm(path.join(cursorSkillsHome(), `plugin-tools-${agentId}`), { recursive: true, force: true }).catch(() => {});
-    await fs.rm(path.join(cursorSkillsHome(), "plugin-tools.md"), { force: true }).catch(() => {});
   }
 }

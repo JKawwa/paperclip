@@ -43,9 +43,6 @@ import {
   readPaperclipRuntimeSkillEntries,
   readPaperclipIssueWorkModeFromContext,
   resolvePaperclipDesiredSkillNames,
-  injectPluginToolsSkill,
-  getPluginToolsPrompt,
-  type PluginToolDispatcher,
 } from "@paperclipai/adapter-utils/server-utils";
 import { isOpenCodeUnknownSessionError, parseOpenCodeJsonl } from "./parse.js";
 import {
@@ -199,9 +196,6 @@ async function buildOpenCodeSkillsDir(config: Record<string, unknown>): Promise<
 
 export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExecutionResult> {
   const { runId, agent, runtime, config, context, onLog, onMeta, onSpawn, authToken } = ctx;
-  const globalPluginToolDispatcher = (ctx as any)?.globalPluginToolDispatcher as
-    | PluginToolDispatcher
-    | undefined;
   const executionTarget = readAdapterExecutionTarget({
     executionTarget: ctx.executionTarget,
     legacyRemoteExecution: ctx.executionTransport?.remoteExecution,
@@ -242,9 +236,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       openCodeSkillEntries,
       desiredOpenCodeSkillNames,
     );
-    await injectPluginToolsSkill(claudeSkillsHome(), agent, globalPluginToolDispatcher);
   }
-
   const envConfig = parseObject(config.env);
   const hasExplicitApiKey =
     typeof envConfig.PAPERCLIP_API_KEY === "string" && envConfig.PAPERCLIP_API_KEY.trim().length > 0;
@@ -360,7 +352,6 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
 
     if (executionTarget?.kind === "remote") {
       localSkillsDir = await buildOpenCodeSkillsDir(config);
-      await injectPluginToolsSkill(localSkillsDir, agent, globalPluginToolDispatcher);
       await onLog(
         "stdout",
         `[paperclip] Syncing workspace and OpenCode runtime assets to ${describeAdapterExecutionTarget(executionTarget)}.\n`,
@@ -540,13 +531,11 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     const shouldUseResumeDeltaPrompt = Boolean(sessionId) && wakePrompt.length > 0;
     const renderedPrompt = shouldUseResumeDeltaPrompt ? "" : renderTemplate(promptTemplate, templateData);
     const sessionHandoffNote = asString(context.paperclipSessionHandoffMarkdown, "").trim();
-    const toolsPrompt = getPluginToolsPrompt(agent, globalPluginToolDispatcher);
     const prompt = joinPromptSections([
       instructionsPrefix,
       renderedBootstrapPrompt,
       wakePrompt,
       sessionHandoffNote,
-      toolsPrompt,
       renderedPrompt,
     ]);
     const promptMetrics = {
@@ -696,8 +685,6 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
         paperclipBridge?.stop(),
         restoreRemoteWorkspace?.(),
         localSkillsDir ? fs.rm(path.dirname(localSkillsDir), { recursive: true, force: true }).catch(() => undefined) : Promise.resolve(),
-        fs.rm(path.join(claudeSkillsHome(), `plugin-tools-${agentId}`), { recursive: true, force: true }).catch(() => {}),
-        fs.rm(path.join(claudeSkillsHome(), "plugin-tools.md"), { force: true }).catch(() => {}),
       ]);
     }
   } finally {

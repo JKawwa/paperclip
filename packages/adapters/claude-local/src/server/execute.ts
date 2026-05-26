@@ -44,14 +44,7 @@ import {
   shapePaperclipWorkspaceEnvForExecution,
   stringifyPaperclipWakePayload,
   DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE,
-  getPluginToolsPrompt,
 } from "@paperclipai/adapter-utils/server-utils";
-// PluginToolDispatcher is provided by the server context at runtime
-interface PluginToolDispatcher {
-  getTool(namespacedName: string): any;
-  listToolsForAgent(filter?: { pluginId?: string }): any[];
-  executeTool(tool: string, parameters: any, runContext: any): Promise<any>;
-}
 import { shellQuote } from "@paperclipai/adapter-utils/ssh";
 import {
   parseClaudeStreamJson,
@@ -462,23 +455,12 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       );
     }
   }
-  // Get global plugin tool dispatcher from context or fallback to imported instance
-  const globalPluginToolDispatcher = (ctx as any)?.globalPluginToolDispatcher as
-    | PluginToolDispatcher
-    | undefined;
-
-  const toolsPrompt = getPluginToolsPrompt(agent, globalPluginToolDispatcher);
-  if (toolsPrompt) {
-    combinedInstructionsContents = (combinedInstructionsContents ?? "") + "\n\n" + toolsPrompt;
-  }
 
   const promptBundle = await prepareClaudePromptBundle({
     companyId: agent.companyId,
     skills: claudeSkillEntries.filter((entry) => desiredSkillNames.has(entry.key)),
     instructionsContents: combinedInstructionsContents,
     onLog,
-    toolDispatcher: globalPluginToolDispatcher,
-    agent,
   });
   const useManagedRemoteClaudeConfig =
     executionTargetIsRemote &&

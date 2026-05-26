@@ -46,9 +46,6 @@ import {
   stringifyPaperclipWakePayload,
   DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE,
   runChildProcess,
-  injectPluginToolsSkill,
-  getPluginToolsPrompt,
-  type PluginToolDispatcher,
 } from "@paperclipai/adapter-utils/server-utils";
 import { DEFAULT_GEMINI_LOCAL_MODEL, SANDBOX_INSTALL_COMMAND } from "../index.js";
 import {
@@ -190,10 +187,6 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   const model = asString(config.model, DEFAULT_GEMINI_LOCAL_MODEL).trim();
   const sandbox = asBoolean(config.sandbox, false);
 
-  const globalPluginToolDispatcher = (ctx as any)?.globalPluginToolDispatcher as
-    | PluginToolDispatcher
-    | undefined;
-
   const workspaceContext = parseObject(context.paperclipWorkspace);
   const workspaceCwd = asString(workspaceContext.cwd, "");
   const workspaceSource = asString(workspaceContext.source, "");
@@ -216,7 +209,6 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   const desiredGeminiSkillNames = resolvePaperclipDesiredSkillNames(config, geminiSkillEntries);
   if (!executionTargetIsRemote) {
     await ensureGeminiSkillsInjected(onLog, geminiSkillEntries, desiredGeminiSkillNames);
-    await injectPluginToolsSkill(geminiSkillsHome(), agent, globalPluginToolDispatcher);
   }
 
   const envConfig = parseObject(config.env);
@@ -328,7 +320,6 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   if (executionTargetIsRemote) {
     try {
       localSkillsDir = await buildGeminiSkillsDir(config);
-      await injectPluginToolsSkill(localSkillsDir, agent, globalPluginToolDispatcher);
       await onLog(
         "stdout",
         `[paperclip] Syncing workspace and Gemini runtime assets to ${describeAdapterExecutionTarget(executionTarget)}.\n`,
@@ -493,7 +484,6 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   const sessionHandoffNote = asString(context.paperclipSessionHandoffMarkdown, "").trim();
   const paperclipEnvNote = renderPaperclipEnvNote(env);
   const apiAccessNote = renderApiAccessNote(env);
-  const toolsPrompt = getPluginToolsPrompt(agent, globalPluginToolDispatcher);
   const prompt = joinPromptSections([
     instructionsPrefix,
     renderedBootstrapPrompt,
@@ -501,7 +491,6 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     sessionHandoffNote,
     paperclipEnvNote,
     apiAccessNote,
-    toolsPrompt,
     renderedPrompt,
   ]);
   const promptMetrics = {
@@ -683,8 +672,6 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       paperclipBridge?.stop(),
       restoreRemoteWorkspace?.(),
       localSkillsDir ? fs.rm(path.dirname(localSkillsDir), { recursive: true, force: true }).catch(() => undefined) : Promise.resolve(),
-      fs.rm(path.join(geminiSkillsHome(), `plugin-tools-${agentId}`), { recursive: true, force: true }).catch(() => {}),
-      fs.rm(path.join(geminiSkillsHome(), "plugin-tools.md"), { force: true }).catch(() => {}),
     ]);
   }
 }

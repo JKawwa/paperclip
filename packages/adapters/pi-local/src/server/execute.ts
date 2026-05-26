@@ -44,9 +44,6 @@ import {
   stringifyPaperclipWakePayload,
   DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE,
   runChildProcess,
-  injectPluginToolsSkill,
-  getPluginToolsPrompt,
-  type PluginToolDispatcher,
 } from "@paperclipai/adapter-utils/server-utils";
 import { shellQuote } from "@paperclipai/adapter-utils/ssh";
 import { isPiUnknownSessionError, parsePiJsonl } from "./parse.js";
@@ -216,9 +213,6 @@ async function readSavedSessionCwd(input: {
 
 export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExecutionResult> {
   const { runId, agent, runtime, config, context, onLog, onMeta, onSpawn, authToken } = ctx;
-  const globalPluginToolDispatcher = (ctx as any)?.globalPluginToolDispatcher as
-    | PluginToolDispatcher
-    | undefined;
   const executionTarget = readAdapterExecutionTarget({
     executionTarget: ctx.executionTarget,
     legacyRemoteExecution: ctx.executionTransport?.remoteExecution,
@@ -264,7 +258,6 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   const desiredPiSkillNames = resolvePaperclipDesiredSkillNames(config, piSkillEntries);
   if (!executionTargetIsRemote) {
     await ensurePiSkillsInjected(onLog, piSkillEntries, desiredPiSkillNames);
-    await injectPluginToolsSkill(PI_AGENT_SKILLS_DIR, agent, globalPluginToolDispatcher);
   }
 
   // Build environment
@@ -403,7 +396,6 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   if (executionTargetIsRemote) {
     try {
       localSkillsDir = await buildPiSkillsDir(config);
-      await injectPluginToolsSkill(localSkillsDir, agent, globalPluginToolDispatcher);
       await onLog(
         "stdout",
         `[paperclip] Syncing workspace and Pi runtime assets to ${describeAdapterExecutionTarget(executionTarget)}.\n`,
@@ -574,11 +566,6 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     }
   } else {
     systemPromptExtension = promptTemplate;
-  }
-
-  const toolsPrompt = getPluginToolsPrompt(agent, globalPluginToolDispatcher);
-  if (toolsPrompt) {
-    systemPromptExtension = systemPromptExtension + "\n\n" + toolsPrompt;
   }
 
   const bootstrapPromptTemplate = asString(config.bootstrapPromptTemplate, "");
@@ -826,8 +813,6 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       paperclipBridge?.stop(),
       restoreRemoteWorkspace?.(),
       localSkillsDir ? fs.rm(path.dirname(localSkillsDir), { recursive: true, force: true }).catch(() => undefined) : Promise.resolve(),
-      fs.rm(path.join(PI_AGENT_SKILLS_DIR, `plugin-tools-${agentId}`), { recursive: true, force: true }).catch(() => {}),
-      fs.rm(path.join(PI_AGENT_SKILLS_DIR, "plugin-tools.md"), { force: true }).catch(() => {}),
     ]);
   }
 }
