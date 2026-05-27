@@ -1,0 +1,141 @@
+system
+step started (ses_19d8a3632ffeb8q5fXqFkqn6Pq)
+tool_call
+bash
+{
+  "command": "$body = @{\n    tool = \"paperclip-plugin-slack:post_custom_message\"\n    parameters = @{\n        channelId = \"C07KP6X7E4X\"  # Default test channel\n        text = \"Testing paperclip-slack-plugin integration via paperclip-plugin-tools skill. This is an automated test message from the CTO agent.\"\n    }\n    runContext = @{\n        agentId = $env:PAPERCLIP_AGENT_ID\n        runId = $env:PAPERCLIP_RUN_ID\n        companyId = $env:PAPERCLIP_COMPANY_ID\n        projectId = if ($env:PAPERCLIP_PROJECT_ID) { $env:PAPERCLIP_PROJECT_ID } else { $env:PAPERCLIP_WORKSPACE_ID }\n    }\n} | ConvertTo-Json -Depth 5\n\nInvoke-RestMethod `\n    -Uri \"$env:PAPERCLIP_API_URL/api/plugins/tools/execute\" `\n    -Method POST `\n    -Headers @{\n        \"Authorization\" = \"Bearer $env:PAPERCLIP_API_KEY\"\n        \"X-Paperclip-Run-Id\" = $env:PAPERCLIP_RUN_ID\n        \"Content-Type\" = \"application/json\"\n    } `\n    -Body $body",
+  "description": "Test paperclip-slack-plugin by posting a test message to Slack channel C07KP6X7E4X"
+}
+tool_result
+status: completed
+output: Invoke-RestMethod : {"error":"\"runContext\" must include agentId, runId, companyId, and projectId"}
+At line:15 char:1
++ Invoke-RestMethod `
++ ~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (System.Net.HttpWebRequest:HttpWebRequest) [Invoke-RestMethod], WebExc 
+   eption
+    + FullyQualifiedErrorId : WebCmdletWebResponseException,Microsoft.PowerShell.Commands.InvokeRestMethodCommand
+
+exit: 1
+description: Test paperclip-slack-plugin by posting a test message to Slack channel C07KP6X7E4X
+truncated: false
+
+Invoke-RestMethod : {"error":"\"runContext\" must include agentId, runId, companyId, and projectId"}
+At line:15 char:1
++ Invoke-RestMethod `
++ ~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (System.Net.HttpWebRequest:HttpWebRequest) [Invoke-RestMethod], WebExc 
+   eption
+    + FullyQualifiedErrorId : WebCmdletWebResponseException,Microsoft.PowerShell.Commands.InvokeRestMethodCommand
+result
+tool-calls
+40.6k / 344 / $0.000000
+system
+step started (ses_19d8a3632ffeb8q5fXqFkqn6Pq)
+tool_call
+bash
+{
+  "command": "$body = @{\n    tool = \"paperclip-plugin-slack:post_custom_message\"\n    parameters = @{\n        channelId = \"C07KP6X7E4X\"\n        text = \"Testing paperclip-slack-plugin integration via paperclip-plugin-tools skill. This is an automated test message from the CTO agent.\"\n    }\n    runContext = @{\n        agentId = $env:PAPERCLIP_AGENT_ID\n        runId = $env:PAPERCLIP_RUN_ID\n        companyId = $env:PAPERCLIP_COMPANY_ID\n        projectId = $env:PAPERCLIP_COMPANY_ID  # Fallback to companyId if projectId is not set\n    }\n} | ConvertTo-Json -Depth 5\n\nInvoke-RestMethod `\n    -Uri \"$env:PAPERCLIP_API_URL/api/plugins/tools/execute\" `\n    -Method POST `\n    -Headers @{\n        \"Authorization\" = \"Bearer $env:PAPERCLIP_API_KEY\"\n        \"X-Paperclip-Run-Id\" = $env:PAPERCLIP_RUN_ID\n        \"Content-Type\" = \"application/json\"\n    } `\n    -Body $body",
+  "description": "Retry test with projectId fallback to companyId"
+}
+tool_result
+status: completed
+output: Invoke-RestMethod : {"error":"\"runContext.projectId\" does not belong to \"runContext.companyId\""}
+At line:15 char:1
++ Invoke-RestMethod `
++ ~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (System.Net.HttpWebRequest:HttpWebRequest) [Invoke-RestMethod], WebExc 
+   eption
+    + FullyQualifiedErrorId : WebCmdletWebResponseException,Microsoft.PowerShell.Commands.InvokeRestMethodCommand
+
+exit: 1
+description: Retry test with projectId fallback to companyId
+truncated: false
+
+Invoke-RestMethod : {"error":"\"runContext.projectId\" does not belong to \"runContext.companyId\""}
+At line:15 char:1
++ Invoke-RestMethod `
++ ~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (System.Net.HttpWebRequest:HttpWebRequest) [Invoke-RestMethod], WebExc 
+   eption
+    + FullyQualifiedErrorId : WebCmdletWebResponseException,Microsoft.PowerShell.Commands.InvokeRestMethodCommand
+result
+tool-calls
+41.1k / 305 / $0.000000
+system
+step started (ses_19d8a3632ffeb8q5fXqFkqn6Pq)
+tool_call
+bash
+{
+  "command": "$body = @{\n    tool = \"paperclip-plugin-slack:post_custom_message\"\n    parameters = @{\n        channelId = \"C07KP6X7E4X\"\n        text = \"Testing paperclip-slack-plugin integration via paperclip-plugin-tools skill. This is an automated test message from the CTO agent.\"\n    }\n    runContext = @{\n        agentId = $env:PAPERCLIP_AGENT_ID\n        runId = $env:PAPERCLIP_RUN_ID\n        companyId = $env:PAPERCLIP_COMPANY_ID\n    }\n} | ConvertTo-Json -Depth 5\n\nInvoke-RestMethod `\n    -Uri \"$env:PAPERCLIP_API_URL/api/plugins/tools/execute\" `\n    -Method POST `\n    -Headers @{\n        \"Authorization\" = \"Bearer $env:PAPERCLIP_API_KEY\"\n        \"X-Paperclip-Run-Id\" = $env:PAPERCLIP_RUN_ID\n        \"Content-Type\" = \"application/json\"\n    } `\n    -Body $body",
+  "description": "Retry test without projectId"
+}
+tool_result
+status: completed
+output: Invoke-RestMethod : {"error":"\"runContext\" must include agentId, runId, companyId, and projectId"}
+At line:14 char:1
++ Invoke-RestMethod `
++ ~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (System.Net.HttpWebRequest:HttpWebRequest) [Invoke-RestMethod], WebExc 
+   eption
+    + FullyQualifiedErrorId : WebCmdletWebResponseException,Microsoft.PowerShell.Commands.InvokeRestMethodCommand
+
+exit: 1
+description: Retry test without projectId
+truncated: false
+
+Invoke-RestMethod : {"error":"\"runContext\" must include agentId, runId, companyId, and projectId"}
+At line:14 char:1
++ Invoke-RestMethod `
++ ~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (System.Net.HttpWebRequest:HttpWebRequest) [Invoke-RestMethod], WebExc 
+   eption
+    + FullyQualifiedErrorId : WebCmdletWebResponseException,Microsoft.PowerShell.Commands.InvokeRestMethodCommand
+result
+tool-calls
+41.6k / 272 / $0.000000
+system
+step started (ses_19d8a3632ffeb8q5fXqFkqn6Pq)
+stdout
+{"type":"tool_use","timestamp":1779768710060,"sessionID":"ses_19d8a3632ffeb8q5fXqFkqn6Pq","part":{"type":"tool","tool":"bash","callID":"bwU5NbTHN","state":{"status":"completed","input":{"command":"$headers = @{ \"Authorization\" = \"Bearer $env:PAPERCLIP_API_KEY\" }; Invoke-RestMethod -Uri \"$env:PAPERCLIP_API_URL/api/companies/$env:PAPERCLIP_COMPANY_ID/projects\" -Method GET -Headers $headers | ConvertTo-Json -Depth 10","description":"List projects to get a valid projectId"},"output":"{\r\n    \"value\":  [\r\n                  {\r\n                      \"id\":  \"ab9e2cd1-7746-421b-9d9a-87a103a386f8\",\r\n                      \"companyId\":  \"d0b61e38-82d9-4bcf-b9e8-8ea970388ba9\",\r\n                      \"goalId\":  \"1bcce1f5-2c82-4d12-9490-7bca5c64241a\",\r\n                      \"name\":  \"Onboarding\",\r\n                      \"description\":  null,\r\n                      \"status\":  \"in_progress\",\r\n                      \"leadAgentId\":  null,\r\n                      \"targetDate\":  null,\r\n                      \"color\":  \"#6366f1\",\r\n                      \"env\":  null,\r\n                      \"pauseReason\":  null,\r\n                      \"pausedAt\":  null,\r\n                      \"executionWorkspacePolicy\":  null,\r\n                      \"archivedAt\":  null,\r\n                      \"createdAt\":  \"2026-05-16T08:50:35.434Z\",\r\n                      \"updatedAt\":  \"2026-05-16T08:50:35.434Z\",\r\n                      \"urlKey\":  \"onboarding\",\r\n                      \"goalIds\":  [\r\n                                      \"1bcce1f5-2c82-4d12-9490-7bca5c64241a\"\r\n                                  ],\r\n                      \"goals\":  [\r\n                                    {\r\n                                        \"id\":  \"1bcce1f5-2c82-4d12-9490-7bca5c64241a\",\r\n                                        \"title\":  \"Research how to have agents in this company use communication tools like popular messaging apps to communicate with the board for permissions and approvals.\"\r\n                                    }\r\n                                ],\r\n                      \"codebase\":  {\r\n                                       \"workspaceId\":  null,\r\n                                       \"repoUrl\":  null,\r\n                                       \"repoRef\":  null,\r\n                                       \"defaultRef\":  null,\r\n                                       \"repoName\":  null,\r\n                                       \"localFolder\":  null,\r\n                                       \"managedFolder\":  \"C:\\\\Users\\\\Jad_K\\\\.paperclip\\\\instances\\\\default\\\\projects\\\\d0b61e38-82d9-4bcf-b9e8-8ea970388ba9\\\\ab9e2cd1-7746-421b-9d9a-87a103a386f8\\\\_default\",\r\n    \\\\instances\\\\default\\\\projects\\\\d0b61e38-82d9-4bcf-b9e8-8ea970388ba9\\\\ab9e2cd1-7746-421b-9d9a-87a103a386f8\\\\_default\",\r\n                                       \"effectiveLocalFolder\":  \"C:\\\\Users\\\\Jad_K\\\\.paperclip\\\\instances\\\\default\\\\projects\\\\d0b61e38-82d9-4bcf-b9e8-8ea970388ba9\\\\ab9e2cd1-7746-421b-9d9a-87a103a386f8\\\\_default\",\r\n                                       \"origin\":  \"managed_checkout\"\r\n                                   },\r\n                      \"workspaces\":  [\r\n\r\n                                     ],\r\n                      \"primaryWorkspace\":  null,\r\n                      \"managedByPlugin\":  null\r\n                  },\r\n                  {\r\n                      \"id\":  \"dda36b86-3a45-4b37-a0a3-823a55327ef7\",\r\n                      \"companyId\":  \"d0b61e38-82d9-4bcf-b9e8-8ea970388ba9\",\r\n                      \"goalId\":  null,\r\n                      \"name\":  \"Communications\",\r\n                      \"description\":  null,\r\n                      \"status\":  \"planned\",\r\n                      \"leadAgentId\":  null,\r\n                      \"targetDate\":  null,\r\n                      \"color\":  \"#6366f1\",\r\n                      \"env\":  null,\r\n                      \"pauseReason\":  null,\r\n                      \"pausedAt\":  null,\r\n                      \"executionWorkspacePolicy\":  null,\r\n                      \"archivedAt\":  null,\r\n                      \"createdAt\":  \"2026-05-25T13:38:49.255Z\",\r\n                      \"updatedAt\":  \"2026-05-25T13:38:49.255Z\",\r\n                      \"urlKey\":  \"communications\",\r\n                      \"goalIds\":  [\r\n\r\n                                  ],\r\n                      \"goals\":  [\r\n\r\n                                ],\r\n                      \"codebase\":  {\r\n                                       \"workspaceId\":  null,\r\n                                       \"repoUrl\":  null,\r\n                                       \"repoRef\":  null,\r\n                                       \"defaultRef\":  null,\r\n                                       \"repoName\":  null,\r\n                                       \"localFolder\":  null,\r\n                                       \"managedFolder\":  \"C:\\\\Users\\\\Jad_K\\\\.paperclip\\\\instances\\\\default\\\\projects\\\\d0b61e38-82d9-4bcf-b9e8-8ea970388ba9\\\\dda36b86-3a45-4b37-a0a3-823a55327ef7\\\\_default\",\r\n                                       \"effectiveLocalFolder\":  \"C:\\\\Users\\\\Jad_K\\\\.paperclip\\\\instances\\\\default\\\\projects\\\\d0b61e38-82d9-4bcf-b9e8-8ea970388ba9\\\\dda36b86-3a45-4b37-a0a3-823a55327ef7\\\\_default\",\r\n                                       \"origin\":  \"managed_checkout\"\r\n                                   },\r\n                      \"workspaces\":  [\r\n\r\n                                     ],\r\n                      \"primaryWorkspace\":  null,\r\n                      \"managedByPlugin\":  null\r\n                  },\r\n                  {\r\n                      \"id\":  \"da0f8e8c-894a-4cb9-8fe0-a66d3ec5569c\",\r\n                      \"companyId\":  \"d0b61e38-82d9-4bcf-b9e8-8ea970388ba9\",\r\n                      \"goalId\":  null,\r\n                      \"name\":  \"Communications2\",\r\n                      \"description\":  null,\r\n                      \"status\":  \"planned\",\r\n                      \"leadAgentId\":  null,\r\n                      \"targetDate\":  null,\r\n                      \"color\":  \"#eab308\",\r\n                      \"env\":  null,\r\n                      \"pauseReason\":  null,\r\n                      \"pausedAt\":  null,\r\n                      \"executionWorkspacePolicy\":  null,\r\n                      \"archivedAt\":  null,\r\n                      \"createdAt\":  \"2026-05-26T01:00:14.480Z\",\r\n                      \"updatedAt\":  \"2026-05-26T01:00:14.480Z\",\r\n                      \"urlKey\":  \"communications2\",\r\n                      \"goalIds\":  [\r\n\r\n                                  ],\r\n                      \"goals\":  [\r\n\r\n                                ],\r\n                      \"codebase\":  {\r\n                                       \"workspaceId\":  null,\r\n                                       \"repoUrl\":  null,\r\n                                       \"repoRef\":  null,\r\n                                       \"defaultRef\":  null,\r\n                                       \"repoName\":  null,\r\n                                       \"localFolder\":  null,\r\n                                       \"managedFolder\":  \"C:\\\\Users\\\\Jad_K\\\\.paperclip\\\\instances\\\\default\\\\projects\\\\d0b61e38-82d9-4bcf-b9e8-8ea970388ba9\\\\da0f8e8c-894a-4cb9-8fe0-a66d3ec5569c\\\\_default\",\r\n                                       \"effectiveLocalFolder\":  \"C:\\\\Users\\\\Jad_K\\\\.paperclip\\\\instances\\\\default\\\\projects\\\\d0b61e38-82d9-4bcf-b9e8-8ea970388ba9\\\\da0f8e8c-894a-4cb9-8fe0-a66d3ec5569c\\\\_default\",\r\n                                       \"origin\":  \"managed_checkout\"\r\n                                   },\r\n                      \"workspaces\":  [\r\n\r\n                                     ],\r\n                      \"primaryWorkspace\":  null,\r\n                      \"managedByPlugin\":  null\r\n                  },\r\n                  {\r\n                      \"id\":  \"8002a7f6-8239-407a-a68a-3dd833f5d600\",\r\n                      \"companyId\":  \"d0b61e38-82d9-4bcf-b9e8-8ea970388ba9\",\r\n                      \"goalId\":  null,\r\n                      \"name\":  \"Communications3\",\r\n                      \"description\":  null,\r\n                      \"status\":  \"planned\",\r\n                      \"leadAgentId\":  null,\r\n                      \"targetDate\":  null,\r\n                      \"color\":  \"#ef4444\",\r\n                      \"env\":  null,\r\n                      \"pauseReason\":  null,\r\n                      \"pausedAt\":  null,\r\n                      \"executionWorkspacePolicy\":  null,\r\n                      \"archivedAt\":  null,\r\n                      \"createdAt\":  \"2026-05-26T03:54:08.669Z\",\r\n                      \"updatedAt\":  \"2026-05-26T03:54:08.669Z\",\r\n                      \"urlKey\":  \"communications3\",\r\n                      \"goalIds\":  [\r\n\r\n                                  ],\r\n                      \"goals\":  [\r\n\r\n                                ],\r\n                      \"codebase\":  {\r\n                                       \"workspaceId\":  null,\r\n                                       \"repoUrl\":  null,\r\n                                       \"repoRef\":  null,\r\n                                       \"defaultRef\":  null,\r\n                                       \"repoName\":  null,\r\n                                       \"localFolder\":  null,\r\n                                       \"managedFolder\":  \"C:\\\\Users\\\\Jad_K\\\\.paperclip\\\\instances\\\\default\\\\projects\\\\d0b61e38-82d9-4bcf-b9e8-8ea970388ba9\\\\8002a7f6-8239-407a-a68a-3dd833f5d600\\\\_default\",\r\n                                       \"effectiveLocalFolder\":  \"C:\\\\Users\\\\Jad_K\\\\.paperclip\\\\instances\\\\default\\\\projects\\\\d0b61e38-82d9-4bcf-b9e8-8ea970388ba9\\\\8002a7f6-8239-407a-a68a-3dd833f5d600\\\\_default\",\r\n                                       \"origin\":  \"managed_checkout\"\r\n                                   },\r\n                      \"workspaces\":  [\r\n\r\n                                     ],\r\n                      \"primaryWorkspace\":  null,\r\n                      \"managedByPlugin\":  null\r\n                  }\r\n              ],\r\n    \"Count\":  4\r\n}\r\n","exit":0,"description":"List projects to get a valid projectId","truncated":false},"title":"List projects to get a valid projectId","time":{"start":1779768710035,"end":1779768710054}},"id":"prt_e627b480f001nvWyxM5yZVOALP","sessionID":"ses_19d8a3632ffeb8q5fXqFkqn6Pq","messageID":"msg_e627b34aa001qePvV0qW0Xbpgi"}}
+result
+tool-calls
+42.0k / 94 / $0.000000
+system
+step started (ses_19d8a3632ffeb8q5fXqFkqn6Pq)
+tool_call
+bash
+{
+  "command": "$body = @{\n    tool = \"paperclip-plugin-slack:post_custom_message\"\n    parameters = @{\n        channelId = \"C07KP6X7E4X\"\n        text = \"Testing paperclip-slack-plugin integration via paperclip-plugin-tools skill. This is an automated test message from the CTO agent.\"\n    }\n    runContext = @{\n        agentId = $env:PAPERCLIP_AGENT_ID\n        runId = $env:PAPERCLIP_RUN_ID\n        companyId = $env:PAPERCLIP_COMPANY_ID\n        projectId = \"ab9e2cd1-7746-421b-9d9a-87a103a386f8\"  # Onboarding project\n    }\n} | ConvertTo-Json -Depth 5\n\nInvoke-RestMethod `\n    -Uri \"$env:PAPERCLIP_API_URL/api/plugins/tools/execute\" `\n    -Method POST `\n    -Headers @{\n        \"Authorization\" = \"Bearer $env:PAPERCLIP_API_KEY\"\n        \"X-Paperclip-Run-Id\" = $env:PAPERCLIP_RUN_ID\n        \"Content-Type\" = \"application/json\"\n    } `\n    -Body $body",
+  "description": "Test paperclip-slack-plugin with valid projectId"
+}
+tool_result
+status: completed
+output: Invoke-RestMethod : {"error":"Plugin worker for \"paperclip-plugin-slack\" is not running. The plugin may have failed 
+to start or crashed. Check server logs for details.","details":"Cannot execute tool 
+\"paperclip-plugin-slack:post_custom_message\" - worker for plugin \"paperclip-plugin-slack\" is not 
+running.","errorType":"worker_unavailable"}
+At line:15 char:1
++ Invoke-RestMethod `
++ ~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (System.Net.HttpWebRequest:HttpWebRequest) [Invoke-RestMethod], WebExc 
+   eption
+    + FullyQualifiedErrorId : WebCmdletWebResponseException,Microsoft.PowerShell.Commands.InvokeRestMethodCommand
+
+exit: 1
+description: Test paperclip-slack-plugin with valid projectId
+truncated: false
+
+Invoke-RestMethod : {"error":"Plugin worker for \"paperclip-plugin-slack\" is not running. The plugin may have failed 
+to start or crashed. Check server logs for details.","details":"Cannot execute tool 
+\"paperclip-plugin-slack:post_custom_message\" - worker for plugin \"paperclip-plugin-slack\" is not 
+running.","errorType":"worker_unavailable"}
+At line:15 char:1
++ Invoke-RestMethod `
++ ~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (System.Net.HttpWebRequest:HttpWebRequest) [Invoke-RestMethod], WebExc 
+   eption
+    + FullyQualifiedErrorId : WebCmdletWebResponseException,Microsoft.PowerShell.Commands.InvokeRestMethodCommand
+result
+tool-calls
+44.9k / 323 / $0.000000
