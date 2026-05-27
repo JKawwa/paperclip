@@ -1586,7 +1586,7 @@ function ConfigurationTab({
 
     const groups: Record<string, { plugin: any; tools: typeof pluginTools }> = {};
     for (const tool of pluginTools) {
-      const plugin = plugins.find((p) => p.pluginKey === tool.pluginId);
+      const plugin = plugins.find((p) => p.id === tool.pluginId);
       const pluginKey = plugin ? plugin.pluginKey : (tool.pluginId || "unknown");
       if (!groups[pluginKey]) {
         groups[pluginKey] = {
