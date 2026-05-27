@@ -243,7 +243,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     const envConfig = parseObject(config.env);
      const hasExplicitApiKey =
        typeof envConfig.PAPERCLIP_API_KEY === "string" && envConfig.PAPERCLIP_API_KEY.trim().length > 0;
-      const env: Record<string, string> = { ...buildPaperclipEnv(agent, context, { projectId: context.projectId, workspaceId: context.workspaceId }) };
+      const env: Record<string, string> = { ...buildPaperclipEnv(agent, context) };
     env.PAPERCLIP_RUN_ID = runId;
     const wakeTaskId =
       (typeof context.taskId === "string" && context.taskId.trim().length > 0 && context.taskId.trim()) ||
