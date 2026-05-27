@@ -1973,7 +1973,12 @@ export function pluginLoader(
       // ------------------------------------------------------------------
       const toolDeclarations = manifest.tools ?? [];
       if (toolDeclarations.length > 0) {
-        toolDispatcher.registerPluginTools(pluginKey, manifest);
+        // Use the registry directly (via the getRegistry() escape hatch) so we
+        // can pass pluginId (DB UUID) as pluginDbId. Workers are started keyed
+        // by pluginId, so isRunning() must be checked with the UUID — not the
+        // pluginKey string. registerPluginTools() is the public API but doesn't
+        // expose pluginDbId; getRegistry() is the documented advanced escape hatch.
+        toolDispatcher.getRegistry().registerPlugin(pluginKey, manifest, pluginId);
         registered.tools = toolDeclarations.length;
 
         log.info(
