@@ -73,4 +73,36 @@ describe("buildPaperclipEnv", () => {
 
     expect(env.PAPERCLIP_API_URL).toBe("http://[::1]:3101");
   });
+
+  it("extracts and sets PAPERCLIP_PROJECT_ID and PAPERCLIP_WORKSPACE_ID from context.paperclipWorkspace", () => {
+    const context = {
+      paperclipWorkspace: {
+        projectId: "proj-123",
+        workspaceId: "ws-456",
+      },
+    };
+
+    const env = buildPaperclipEnv({ id: "agent-1", companyId: "company-1" }, context);
+
+    expect(env.PAPERCLIP_PROJECT_ID).toBe("proj-123");
+    expect(env.PAPERCLIP_WORKSPACE_ID).toBe("ws-456");
+  });
+
+  it("falls back to top-level context properties if paperclipWorkspace is missing or incomplete", () => {
+    const context1 = {
+      projectId: "proj-fallback",
+      workspaceId: "ws-fallback",
+    };
+    const env1 = buildPaperclipEnv({ id: "agent-1", companyId: "company-1" }, context1);
+    expect(env1.PAPERCLIP_PROJECT_ID).toBe("proj-fallback");
+    expect(env1.PAPERCLIP_WORKSPACE_ID).toBe("ws-fallback");
+
+    const context2 = {
+      projectId: "proj-fallback",
+      executionWorkspaceId: "ws-exec-fallback",
+    };
+    const env2 = buildPaperclipEnv({ id: "agent-1", companyId: "company-1" }, context2);
+    expect(env2.PAPERCLIP_PROJECT_ID).toBe("proj-fallback");
+    expect(env2.PAPERCLIP_WORKSPACE_ID).toBe("ws-exec-fallback");
+  });
 });

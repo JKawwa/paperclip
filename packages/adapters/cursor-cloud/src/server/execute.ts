@@ -104,7 +104,7 @@ function buildWakeEnv(ctx: AdapterExecutionContext, configEnv: Record<string, st
   const { runId, agent, context, authToken } = ctx;
   const env: Record<string, string> = {
     ...configEnv,
-    ...buildPaperclipEnv(agent),
+    ...buildPaperclipEnv(agent, context),
     PAPERCLIP_RUN_ID: runId,
   };
 
