@@ -72,6 +72,7 @@ export interface AgentPermissionUpdate {
   canAssignTasks: boolean;
   trustPreset?: AgentPermissions["trustPreset"];
   authorizationPolicy?: AgentPermissions["authorizationPolicy"];
+  allowedPluginTools?: Record<string, boolean>;
 }
 
 export interface AgentWakeRequest {

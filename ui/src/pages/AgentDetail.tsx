@@ -7,6 +7,7 @@ import {
   type ClaudeLoginResult,
   type AgentPermissionUpdate,
 } from "../api/agents";
+import { pluginsApi } from "../api/plugins";
 import { companySkillsApi } from "../api/companySkills";
 import { budgetsApi } from "../api/budgets";
 import { heartbeatsApi } from "../api/heartbeats";
@@ -73,6 +74,7 @@ import {
   HelpCircle,
   FolderOpen,
   AlertTriangle,
+  Puzzle,
 } from "lucide-react";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -1602,6 +1604,38 @@ function ConfigurationTab({
     enabled: Boolean(companyId && lowTrustSelected),
   });
 
+  const { data: pluginTools, isLoading: isToolsLoading } = useQuery({
+    queryKey: queryKeys.plugins.tools,
+    queryFn: () => pluginsApi.listTools(),
+  });
+
+  const { data: plugins, isLoading: isPluginsLoading } = useQuery({
+    queryKey: queryKeys.plugins.all,
+    queryFn: () => pluginsApi.list(),
+  });
+
+  const groupedTools = useMemo(() => {
+    if (!pluginTools || !plugins) return [];
+
+    const groups: Record<string, { plugin: any; tools: typeof pluginTools }> = {};
+    for (const tool of pluginTools) {
+      const plugin = plugins.find((p) => p.id === tool.pluginId);
+      const pluginKey = plugin ? plugin.pluginKey : (tool.pluginId || "unknown");
+      if (!groups[pluginKey]) {
+        groups[pluginKey] = {
+          plugin: plugin || {
+            id: pluginKey, // Use pluginKey as ID for fallback
+            pluginKey: pluginKey,
+            manifestJson: { displayName: tool.pluginId ? `${tool.pluginId} (Not Installed)` : "Unknown Plugin" },
+          },
+          tools: [],
+        };
+      }
+      groups[pluginKey].tools.push(tool);
+    }
+    return Object.values(groups);
+  }, [pluginTools, plugins]);
+
   const updateAgent = useMutation({
     mutationFn: (data: Record<string, unknown>) => agentsApi.update(agent.id, data, companyId),
     onMutate: () => {
@@ -1707,6 +1741,7 @@ function ConfigurationTab({
                 updatePermissions.mutate({
                   canCreateAgents: !canCreateAgents,
                   canAssignTasks: !canCreateAgents ? true : canAssignTasks,
+                  allowedPluginTools: (agent.permissions as any)?.allowedPluginTools ?? {},
                 })
               }
               disabled={updatePermissions.isPending}
@@ -1725,12 +1760,75 @@ function ConfigurationTab({
                 updatePermissions.mutate({
                   canCreateAgents,
                   canAssignTasks: !canAssignTasks,
+                  allowedPluginTools: (agent.permissions as any)?.allowedPluginTools ?? {},
                 })
               }
               disabled={updatePermissions.isPending || taskAssignLocked}
             />
           </div>
         </div>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-medium mb-3">Integration Tools</h3>
+        {isToolsLoading || isPluginsLoading ? (
+          <div className="border border-border rounded-lg p-4 space-y-3">
+            <Skeleton className="h-5 w-1/3" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        ) : groupedTools.length === 0 ? (
+          <div className="border border-border border-dashed rounded-lg p-6 text-center text-sm text-muted-foreground bg-accent/10">
+            <Puzzle className="h-8 w-8 mx-auto mb-2 text-muted-foreground/60" />
+            No plugin-contributed integration tools are currently available.
+          </div>
+        ) : (
+          <div className="border border-border rounded-lg divide-y divide-border overflow-hidden bg-card">
+            {groupedTools.map(({ plugin, tools }) => (
+              <div key={plugin.id} className="p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Puzzle className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {plugin.manifestJson?.displayName || plugin.pluginKey}
+                  </span>
+                </div>
+                <div className="space-y-4 pl-6">
+                  {tools.map((tool) => {
+                    const isAllowed = Boolean((agent.permissions as any)?.allowedPluginTools?.[tool.name]);
+                    return (
+                      <div key={tool.name} className="flex items-start justify-between gap-4 text-sm">
+                        <div className="space-y-0.5">
+                          <div className="font-mono text-xs font-medium text-foreground">
+                            {tool.name}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {tool.description || "No description provided."}
+                          </p>
+                        </div>
+                        <ToggleSwitch
+                          checked={isAllowed}
+                          onCheckedChange={() => {
+                            const allowedPluginTools = (agent.permissions as any)?.allowedPluginTools ?? {};
+                            const nextAllowedTools = {
+                              ...allowedPluginTools,
+                              [tool.name]: !isAllowed,
+                            };
+                            updatePermissions.mutate({
+                              canCreateAgents,
+                              canAssignTasks,
+                              allowedPluginTools: nextAllowedTools,
+                            });
+                          }}
+                          disabled={updatePermissions.isPending}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
