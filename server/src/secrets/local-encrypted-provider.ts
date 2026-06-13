@@ -1,7 +1,41 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { chmodSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { resolveDefaultSecretsKeyFilePath } from "../home-paths.js";
+
+function verifyWindowsFileSecurity(filePath: string): { secure: boolean; warnings: string[] } {
+  try {
+    const rawOutput = execFileSync("icacls", [filePath], { encoding: "utf8" });
+    // Remove the file path from the output to prevent false positives on folder names (e.g., C:\\Users\\...)
+    const escapedPath = filePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const output = rawOutput.replace(new RegExp(escapedPath, "gi"), "");
+    const insecureGroups = [
+      "Everyone",
+      "Users",
+      "BUILTIN\\Users",
+      "Guests",
+      "BUILTIN\\Guests",
+      "Authenticated Users",
+      "ANONYMOUS LOGON"
+    ];
+    const warnings: string[] = [];
+    if (output.includes("(I)")) {
+      warnings.push(`Inheritance is enabled on key file ${filePath}; run icacls "${filePath}" /inheritance:d`);
+    }
+    for (const group of insecureGroups) {
+      if (new RegExp(`\\b${group}\\b`, "i").test(output)) {
+        warnings.push(`Insecure group/user "${group}" has access to key file ${filePath}; run icacls "${filePath}" /remove "${group}"`);
+      }
+    }
+    return {
+      secure: warnings.length === 0,
+      warnings
+    };
+  } catch {
+    return { secure: true, warnings: [] };
+  }
+}
 import type {
   PreparedSecretVersion,
   SecretProviderHealthCheck,
@@ -174,11 +208,16 @@ async function inspectLocalEncryptedHealth(): Promise<SecretProviderHealthCheck>
       details: { keySource: "file", keyFilePath: keyPath },
     };
   }
-
-  const warnings =
-    mode !== null && (mode & 0o077) !== 0
-      ? [`Secrets key file permissions are ${mode.toString(8)}; run chmod 600 ${keyPath}`]
-      : [];
+  //console.log(`[DEBUG] process.platform in local-encrypted-provider is: ${process.platform}`);
+  const warnings: string[] = [];
+  if (process.platform === "win32") {
+    const winSec = verifyWindowsFileSecurity(keyPath);
+    if (!winSec.secure) {
+      warnings.push(...winSec.warnings);
+    }
+  } else if (mode !== null && (mode & 0o077) !== 0) {
+    warnings.push(`Secrets key file permissions are ${mode.toString(8)}; run chmod 600 ${keyPath}`);
+  }
   return {
     provider: "local_encrypted",
     status: warnings.length > 0 ? "warn" : "ok",
