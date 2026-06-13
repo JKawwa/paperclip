@@ -11,6 +11,7 @@ import {
 
 type SkillEntry = PaperclipSkillEntry;
 
+
 export interface ClaudePromptBundle {
   bundleKey: string;
   rootDir: string;
