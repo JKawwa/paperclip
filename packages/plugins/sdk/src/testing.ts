@@ -20,6 +20,8 @@ import type {
   IssueDocument,
   Agent,
   Goal,
+  Approval,
+  ApprovalComment,
 } from "@paperclipai/shared";
 import type {
   EventFilter,
@@ -499,6 +501,8 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
     }
     return stamped;
   }
+  const approvalStore = new Map<string, Approval>();
+  const approvalCommentStore = new Map<string, ApprovalComment>();
   const projectWorkspaces = new Map<string, PluginWorkspace[]>();
   const executionWorkspaces = new Map<string, PluginExecutionWorkspaceMetadata>();
   const localFolderStatuses = new Map<string, PluginLocalFolderStatus>();
@@ -2234,6 +2238,63 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
           requireCompanyId(input.companyId);
           return [];
         },
+      },
+    },
+    approvals: {
+      async list(input) {
+        requireCapability(manifest, capabilitySet, "admin.approvals");
+        const companyId = requireCompanyId(input?.companyId);
+        let out = [...approvalStore.values()];
+        out = out.filter((a) => a.companyId === companyId);
+        if (input?.status) out = out.filter((a) => a.status === input.status);
+        return out;
+      },
+      async get(approvalId) {
+        requireCapability(manifest, capabilitySet, "admin.approvals");
+        return approvalStore.get(approvalId) ?? null;
+      },
+      async approve(approvalId, decidedByUserId, decisionNote) {
+        requireCapability(manifest, capabilitySet, "admin.approvals");
+        const existing = approvalStore.get(approvalId);
+        if (!existing) throw new Error(`Approval not found: ${approvalId}`);
+        const updated = { ...existing, status: "approved" as const, decidedByUserId, decisionNote: decisionNote ?? null, decidedAt: new Date() };
+        approvalStore.set(approvalId, updated);
+        return { id: approvalId, status: "approved" };
+      },
+      async reject(approvalId, decidedByUserId, decisionNote) {
+        requireCapability(manifest, capabilitySet, "admin.approvals");
+        const existing = approvalStore.get(approvalId);
+        if (!existing) throw new Error(`Approval not found: ${approvalId}`);
+        const updated = { ...existing, status: "rejected" as const, decidedByUserId, decisionNote: decisionNote ?? null, decidedAt: new Date() };
+        approvalStore.set(approvalId, updated);
+        return { id: approvalId, status: "rejected" };
+      },
+      async requestRevision(approvalId, decidedByUserId, decisionNote) {
+        requireCapability(manifest, capabilitySet, "admin.approvals");
+        const existing = approvalStore.get(approvalId);
+        if (!existing) throw new Error(`Approval not found: ${approvalId}`);
+        const updated = { ...existing, status: "revision_requested" as const, decidedByUserId, decisionNote: decisionNote ?? null, decidedAt: new Date() };
+        approvalStore.set(approvalId, updated);
+        return { id: approvalId, status: "revision_requested" };
+      },
+      async listComments(approvalId) {
+        requireCapability(manifest, capabilitySet, "admin.approvals");
+        return [...approvalCommentStore.values()].filter((c) => c.approvalId === approvalId);
+      },
+      async addComment(approvalId, body) {
+        requireCapability(manifest, capabilitySet, "admin.approvals");
+        const record: ApprovalComment = {
+          id: randomUUID(),
+          companyId: "",
+          approvalId,
+          authorAgentId: null,
+          authorUserId: null,
+          body,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        approvalCommentStore.set(record.id, record);
+        return record;
       },
     },
     data: {
