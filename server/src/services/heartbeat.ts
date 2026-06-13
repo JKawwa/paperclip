@@ -8772,7 +8772,7 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
             : undefined,
           onLog,
           onMeta: onAdapterMeta,
-          onSpawn: async (meta) => {
+          onSpawn: async (meta: { pid: number; processGroupId: number | null; startedAt: string }) => {
             await persistRunProcessMetadata(run.id, {
               pid: meta.pid,
               processGroupId:
