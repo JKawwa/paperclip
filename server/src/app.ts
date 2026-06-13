@@ -291,6 +291,17 @@ export async function createApp(
           pluginWorkerManager: workerManager,
           manifest,
         });
+        
+        // Clean up any leaked or stale subscriptions/connections from a previous run
+        const existingDisposer = hostServicesDisposers.get(pluginId);
+        if (existingDisposer) {
+          try {
+            existingDisposer();
+          } catch (err) {
+            logger.warn({ err, pluginId }, "Failed to dispose existing host services on plugin reload");
+          }
+        }
+        
         hostServicesDisposers.set(pluginId, () => services.dispose());
         return createHostClientHandlers({
           pluginId,
