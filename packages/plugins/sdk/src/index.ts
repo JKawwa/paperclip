@@ -276,6 +276,7 @@ export type {
   PermissionKey,
   PrincipalPermissionGrant,
   PrincipalType,
+  Approval,
   PluginDatabaseClient,
   HumanCompanyMembershipRole,
   MembershipStatus,

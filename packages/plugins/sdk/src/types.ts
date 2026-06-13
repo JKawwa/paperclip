@@ -46,6 +46,8 @@ import type {
   PermissionKey,
   PrincipalPermissionGrant,
   PrincipalType,
+  Approval,
+  ApprovalComment,
 } from "@paperclipai/shared";
 import type { PluginPerformActionContext } from "./protocol.js";
 
@@ -135,6 +137,8 @@ export type {
   PermissionKey,
   PrincipalPermissionGrant,
   PrincipalType,
+  Approval,
+  ApprovalComment,
 } from "@paperclipai/shared";
 
 // ---------------------------------------------------------------------------
@@ -1763,6 +1767,21 @@ export interface PluginAuthorizationClient {
   };
 }
 
+/**
+ * `ctx.approvals` — read and resolve approvals.
+ *
+ * Requires `admin.approvals`.
+ */
+export interface PluginApprovalsClient {
+  list(input: { companyId: string; status?: string }): Promise<Approval[]>;
+  get(approvalId: string): Promise<Approval | null>;
+  approve(approvalId: string, decidedByUserId: string, decisionNote?: string | null): Promise<{ id: string; status: string }>;
+  reject(approvalId: string, decidedByUserId: string, decisionNote?: string | null): Promise<{ id: string; status: string }>;
+  requestRevision(approvalId: string, decidedByUserId: string, decisionNote?: string | null): Promise<{ id: string; status: string }>;
+  listComments(approvalId: string): Promise<ApprovalComment[]>;
+  addComment(approvalId: string, body: string): Promise<ApprovalComment>;
+}
+
 // ---------------------------------------------------------------------------
 // Streaming (worker → UI push channel)
 // ---------------------------------------------------------------------------
@@ -1908,6 +1927,9 @@ export interface PluginContext {
 
   /** Read and manage authorization grants, policy summaries, previews, and audit entries. Requires `authorization.*` capabilities. */
   authorization: PluginAuthorizationClient;
+
+  /** Read and resolve approvals. Requires `admin.approvals`. */
+  approvals: PluginApprovalsClient;
 
   /** Register getData handlers for the plugin's UI components. */
   data: PluginDataClient;

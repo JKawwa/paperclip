@@ -38,6 +38,8 @@ import type {
   RoutineRun,
   Agent,
   Goal,
+  Approval,
+  ApprovalComment,
   PluginLocalFolderDeclaration,
   PrincipalPermissionGrant,
 } from "@paperclipai/shared";
@@ -1341,6 +1343,36 @@ export interface WorkerToHostMethods {
       offset?: number;
     },
     result: PluginAuthorizationAuditEntry[],
+  ];
+
+  // Approvals (admin.approvals capability)
+  "approvals.list": [
+    params: { companyId: string; status?: string },
+    result: Approval[],
+  ];
+  "approvals.get": [
+    params: { approvalId: string },
+    result: Approval | null,
+  ];
+  "approvals.approve": [
+    params: { approvalId: string; decidedByUserId: string; decisionNote?: string | null },
+    result: { id: string; status: string },
+  ];
+  "approvals.reject": [
+    params: { approvalId: string; decidedByUserId: string; decisionNote?: string | null },
+    result: { id: string; status: string },
+  ];
+  "approvals.requestRevision": [
+    params: { approvalId: string; decidedByUserId: string; decisionNote?: string | null },
+    result: { id: string; status: string },
+  ];
+  "approvals.listComments": [
+    params: { approvalId: string },
+    result: ApprovalComment[],
+  ];
+  "approvals.addComment": [
+    params: { approvalId: string; body: string },
+    result: ApprovalComment,
   ];
 }
 
