@@ -11,6 +11,8 @@ export interface AdapterAgent {
   name: string;
   adapterType: string | null;
   adapterConfig: unknown;
+  projectId?: string | null;
+  workspaceId?: string | null;
 }
 
 export interface AdapterRuntime {

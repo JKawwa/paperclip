@@ -308,11 +308,16 @@ async function prepareClaudeSkillRuntime(input: {
   stateDir: string;
   config: Record<string, unknown>;
   onLog: AdapterExecutionContext["onLog"];
+  agent: { id: string; permissions?: Record<string, any> };
 }): Promise<{
   identity: Record<string, unknown>;
   promptInstructions: string;
   commandNotes: string[];
 }> {
+  const agentPermissions = input.agent.permissions as Record<string, any>;
+  const allowedMap = agentPermissions?.allowedPluginTools ?? {};
+  const hasPluginTools = Object.keys(allowedMap).some((key) => allowedMap[key] === true);
+
   const { selectedSkills, desiredSkillNames } = await resolveSelectedRuntimeSkills(input.config);
   const skillSetKey = await buildSkillSetKey({ skills: selectedSkills, label: "claude" });
   const bundleRoot = path.join(input.stateDir, "runtime-skills", "claude", skillSetKey);
@@ -338,13 +343,13 @@ async function prepareClaudeSkillRuntime(input: {
   }
 
   const selectedNames = selectedSkills.map((entry) => entry.runtimeName).sort();
-  const promptInstructions = selectedSkills.length > 0
+  const promptInstructions = (selectedSkills.length > 0 || hasPluginTools)
     ? [
-        "Paperclip has materialized selected runtime skills for this ACPX Claude session.",
-        `Skill root: ${skillsHome}`,
-        selectedNames.length > 0 ? `Selected skills: ${selectedNames.join(", ")}` : "",
-        "When a task calls for one of these skills, read its SKILL.md from that root and follow it.",
-      ].filter(Boolean).join("\n")
+      "Paperclip has materialized selected runtime skills for this ACPX Claude session.",
+      `Skill root: ${skillsHome}`,
+      selectedNames.length > 0 ? `Selected skills: ${selectedNames.join(", ")}` : "",
+      "When a task calls for one of these skills, read its SKILL.md from that root and follow it.",
+    ].filter(Boolean).join("\n")
     : "";
 
   return {
@@ -353,7 +358,7 @@ async function prepareClaudeSkillRuntime(input: {
       skillSetKey,
       desiredSkillNames,
       selectedSkills: selectedNames,
-      skillRoot: selectedSkills.length > 0 ? skillsHome : null,
+      skillRoot: (selectedSkills.length > 0 || hasPluginTools) ? skillsHome : null,
     },
     promptInstructions,
     commandNotes: selectedSkills.length > 0
@@ -436,6 +441,7 @@ async function prepareCodexSkillRuntime(input: {
   config: Record<string, unknown>;
   env: Record<string, string>;
   onLog: AdapterExecutionContext["onLog"];
+  agent: { id: string; permissions?: Record<string, any> };
 }): Promise<{ identity: Record<string, unknown>; commandNotes: string[] }> {
   const envConfig = parseObject(input.config.env);
   const configuredCodexHome =
@@ -779,7 +785,7 @@ async function buildRuntime(input: {
   const envConfig = parseObject(config.env);
   const hasExplicitApiKey =
     typeof envConfig.PAPERCLIP_API_KEY === "string" && envConfig.PAPERCLIP_API_KEY.trim().length > 0;
-  const env: Record<string, string> = { ...buildPaperclipEnv(agent), PAPERCLIP_RUN_ID: runId };
+  const env: Record<string, string> = { ...buildPaperclipEnv(agent, context), PAPERCLIP_RUN_ID: runId };
   const wakeTaskId =
     (typeof context.taskId === "string" && context.taskId.trim()) ||
     (typeof context.issueId === "string" && context.issueId.trim()) ||
@@ -844,6 +850,7 @@ async function buildRuntime(input: {
       stateDir,
       config,
       onLog: input.ctx.onLog,
+      agent,
     });
     skillPromptInstructions = preparedSkills.promptInstructions;
     skillsIdentity = preparedSkills.identity;
@@ -865,6 +872,7 @@ async function buildRuntime(input: {
       config,
       env,
       onLog: input.ctx.onLog,
+      agent,
     });
     skillsIdentity = preparedSkills.identity;
     skillCommandNotes.push(...preparedSkills.commandNotes);
@@ -884,12 +892,12 @@ async function buildRuntime(input: {
   const childStderrLogPath = agentCommand ? path.join(childStderrDir, `${runId}.log`) : null;
   const wrapper = agentCommand
     ? await writeAgentWrapper({
-        stateDir,
-        acpxAgent,
-        agentCommandShell,
-        env,
-        childStderrDir,
-      })
+      stateDir,
+      acpxAgent,
+      agentCommandShell,
+      env,
+      childStderrDir,
+    })
     : null;
   const wrapperPath = wrapper?.wrapperPath ?? null;
   const overrides = wrapperPath ? { [acpxAgent]: wrapperPath } : undefined;
@@ -909,10 +917,10 @@ async function buildRuntime(input: {
     skillPromptInstructions,
     paperclipClaudeSettings: paperclipClaudeSettings
       ? {
-          allow: paperclipClaudeSettings.allow,
-          additionalDirectories: paperclipClaudeSettings.additionalDirectories,
-          defaultMode: paperclipClaudeSettings.defaultMode,
-        }
+        allow: paperclipClaudeSettings.allow,
+        additionalDirectories: paperclipClaudeSettings.additionalDirectories,
+        defaultMode: paperclipClaudeSettings.defaultMode,
+      }
       : null,
   });
   const taskKey = asString(input.ctx.runtime.taskKey, "") || wakeTaskId || workspaceId || "default";
@@ -1542,10 +1550,10 @@ export function createAcpxLocalExecutor(deps: ExecuteDeps = {}) {
           `Effective ACPX permission mode: ${prepared.permissionMode}.`,
           ...(prepared.requestedModel
             ? [
-                prepared.acpxAgent === "claude"
-                  ? `Requested ACPX model: ${prepared.requestedModel} (set via ANTHROPIC_MODEL env at startup).`
-                  : `Requested ACPX model: ${prepared.requestedModel}.`,
-              ]
+              prepared.acpxAgent === "claude"
+                ? `Requested ACPX model: ${prepared.requestedModel} (set via ANTHROPIC_MODEL env at startup).`
+                : `Requested ACPX model: ${prepared.requestedModel}.`,
+            ]
             : []),
           ...(prepared.requestedThinkingEffort ? [`Requested ACPX thinking effort: ${prepared.requestedThinkingEffort}.`] : []),
           ...(prepared.fastMode ? ["Requested ACPX Codex fast mode."] : []),

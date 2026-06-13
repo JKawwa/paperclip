@@ -1998,7 +1998,7 @@ export function agentRoutes(
       return;
     }
     const agentDetail = await buildAgentDetail(agent);
-    const pluginTools = await getGlobalPluginToolDispatcher().getToolsForAgent(agent.id);
+    const pluginTools = getGlobalPluginToolDispatcher().listToolsForAgent();
     const response = {
       ...agentDetail,
       // Preserve existing capabilities field if present
