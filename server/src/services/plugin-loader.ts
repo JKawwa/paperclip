@@ -1960,10 +1960,9 @@ export function pluginLoader(
       // are registered by the host handler layer when the worker calls
       // events.subscribe via RPC.
       //
-      // The bus.forPlugin() call creates the scoped handle if needed;
-      // any previous subscriptions for this plugin are preserved if the
-      // worker is restarting.
+      // Clear any existing subscriptions from previous runs to prevent accumulation.
       // ------------------------------------------------------------------
+      eventBus.clearPlugin(pluginKey);
       const _scopedBus = eventBus.forPlugin(pluginKey);
       registered.eventSubscriptions = eventBus.subscriptionCount(pluginKey);
 
