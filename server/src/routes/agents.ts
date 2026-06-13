@@ -80,6 +80,7 @@ import { redactEventPayload } from "../redaction.js";
 import { redactCurrentUserValue } from "../log-redaction.js";
 import { renderOrgChartSvg, renderOrgChartPng, type OrgNode, type OrgChartStyle, ORG_CHART_STYLES } from "./org-chart-svg.js";
 import { instanceSettingsService } from "../services/instance-settings.js";
+import { getGlobalPluginToolDispatcher } from "../services/plugin-tool-dispatcher.js";
 import { runClaudeLogin } from "@paperclipai/adapter-claude-local/server";
 import {
   DEFAULT_ACPX_LOCAL_AGENT,
@@ -1996,7 +1997,16 @@ export function agentRoutes(
       res.json(await buildAgentDetail(agent, { restricted: true }));
       return;
     }
-    res.json(await buildAgentDetail(agent));
+    const agentDetail = await buildAgentDetail(agent);
+    const pluginTools = await getGlobalPluginToolDispatcher().getToolsForAgent(agent.id);
+    const response = {
+      ...agentDetail,
+      // Preserve existing capabilities field if present
+      capabilities: agentDetail.capabilities ?? null,
+      // Add a new field `pluginTools` containing the list of plugin-contributed tools
+      pluginTools,
+    };
+    res.json(response);
   });
 
   router.get("/agents/:id/configuration", async (req, res) => {
