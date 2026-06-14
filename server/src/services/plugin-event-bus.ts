@@ -232,11 +232,21 @@ export function createPluginEventBus(): PluginEventBus {
         } else {
           filter = fnOrFilter;
           if (!maybeFn) throw new Error("Handler function is required when a filter is provided");
-          handler = maybeFn;
-        }
+        handler = maybeFn;
+      }
 
-        subsFor(pluginId).push({ eventPattern, filter, handler });
-      },
+      const existingSubs = subsFor(pluginId);
+      const isDuplicate = existingSubs.some(
+        (sub) =>
+          sub.eventPattern === eventPattern &&
+          sub.handler === handler &&
+          JSON.stringify(sub.filter) === JSON.stringify(filter),
+      );
+
+      if (!isDuplicate) {
+        existingSubs.push({ eventPattern, filter, handler });
+      }
+    },
 
       /**
        * Emit a plugin-namespaced event. The event type is automatically

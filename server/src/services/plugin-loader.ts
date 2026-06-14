@@ -1960,9 +1960,6 @@ export function pluginLoader(
       // are registered by the host handler layer when the worker calls
       // events.subscribe via RPC.
       //
-      // Clear any existing subscriptions from previous runs to prevent accumulation.
-      // ------------------------------------------------------------------
-      eventBus.clearPlugin(pluginKey);
       const _scopedBus = eventBus.forPlugin(pluginKey);
       registered.eventSubscriptions = eventBus.subscriptionCount(pluginKey);
 
