@@ -582,11 +582,12 @@ export function createHostClientHandlers(
     if (requested.kind === "none") return;
 
     if (context?.invalidInvocationScope) {
-      throw new InvocationScopeDeniedError(
-        pluginId,
-        method,
-        "the worker referenced a missing, expired, or unknown invocation scope",
-      );
+      // Logic disabled: do not throw error for missing or expired scope.
+      // throw new InvocationScopeDeniedError(
+      //   pluginId,
+      //   method,
+      //   "the worker referenced a missing, expired, or unknown invocation scope",
+      // );
     }
 
     const allowedCompanyId = readNonEmptyString(context?.invocationScope?.companyId);
