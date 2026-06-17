@@ -164,6 +164,7 @@ export const updateAgentPermissionsSchema = z.object({
   canAssignTasks: z.boolean(),
   trustPreset: trustPresetSchema.optional(),
   authorizationPolicy: trustAuthorizationPolicySchema.optional(),
+  allowedPluginTools: z.record(z.boolean()).optional(),
 });
 
 export type UpdateAgentPermissions = z.infer<typeof updateAgentPermissionsSchema>;
